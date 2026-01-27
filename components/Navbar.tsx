@@ -56,7 +56,12 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
         behavior: "smooth"
       });
       
-      window.history.pushState(null, '', href);
+      try {
+        // Attempt to update URL for history, but fail gracefully in restricted environments (e.g. blob URLs)
+        window.history.pushState(null, '', href);
+      } catch (e) {
+        // Ignore security errors in restricted environments
+      }
     }
     setIsOpen(false);
   };
