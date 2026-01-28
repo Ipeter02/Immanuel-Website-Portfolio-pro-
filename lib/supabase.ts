@@ -16,17 +16,18 @@ const getEnvVar = (key: string, defaultValue: string) => {
 
 // --- CONFIGURATION START ---
 // Get these from your Supabase Project Settings > API
-const supabaseUrl = getEnvVar("VITE_SUPABASE_URL", "");
-const supabaseKey = getEnvVar("VITE_SUPABASE_ANON_KEY", "");
+const supabaseUrl = getEnvVar("VITE_SUPABASE_URL", "").trim();
+const supabaseKey = getEnvVar("VITE_SUPABASE_ANON_KEY", "").trim();
 // --- CONFIGURATION END ---
 
-// Create the client if keys exist, otherwise null (triggers local demo mode)
-export const supabase = (supabaseUrl && supabaseKey) 
+// Create the client if keys exist and look valid, otherwise null (triggers local demo mode)
+// Minimal validation: URL must start with http, key must be reasonably long
+export const supabase = (supabaseUrl.startsWith("http") && supabaseKey.length > 20) 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
 
 if (supabase) {
     console.log("✅ Supabase initialized successfully");
 } else {
-    console.log("⚠️ Supabase keys missing. Running in LOCAL DEMO MODE.");
+    console.log("⚠️ Supabase keys missing or invalid. Running in LOCAL DEMO MODE.");
 }

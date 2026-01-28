@@ -50,17 +50,22 @@ function App() {
     }
   }, []);
 
-  // Manage Preloader Timing
+  // Manage Preloader Timing - With Safety Fallback
   useEffect(() => {
-    // Ensure the preloader stays for at least 2 seconds for a smooth experience
-    // And also waits for the data store to be loaded
+    // 1. Normal behavior: When data is loaded, wait 2s then show site
     if (isLoaded) {
       const timer = setTimeout(() => {
         setShowPreloader(false);
-      }, 2000); // 2 seconds minimum display time
-
+      }, 2000); 
       return () => clearTimeout(timer);
     }
+
+    // 2. Safety behavior: Force show site after 4s even if data isn't loaded (prevents blank screen)
+    const safetyTimer = setTimeout(() => {
+        setShowPreloader(false);
+    }, 4000);
+
+    return () => clearTimeout(safetyTimer);
   }, [isLoaded]);
 
   const toggleTheme = () => {

@@ -203,8 +203,13 @@ export const useStore = () => {
                         // Create initial row
                         await supabase.from('portfolio_data').insert([{ id: 1, content: initialData }]);
                         setData(initialData);
+                    } else if (error.code === '42P01') { // Table missing
+                        console.error("Supabase Table Missing. Using default data.");
+                        // DO NOT throw, just use default data so site loads
+                        setData(initialData);
                     } else {
                         console.error("Supabase fetch error:", error);
+                        setData(initialData); // Fallback to default
                     }
                 } else if (dbData && dbData.content) {
                     setData(dbData.content);
@@ -235,8 +240,9 @@ export const useStore = () => {
                 };
 
             } catch (err) {
-                console.error("Supabase error:", err);
-                setIsLoaded(true);
+                console.error("Supabase connection failed:", err);
+                setData(initialData); // Hard Fallback
+                setIsLoaded(true); // Force loaded so preloader vanishes
             }
         } 
         // --- Option 3: Local Storage (Fallback) ---
