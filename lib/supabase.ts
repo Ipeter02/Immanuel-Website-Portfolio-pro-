@@ -9,21 +9,24 @@ const clean = (value: string | undefined) => {
   return value.replace(/["']/g, "").trim();
 };
 
-// --- CONFIGURATION START ---
-// IMPORTANT: Access these directly! Do not use dynamic keys (e.g. env[key]) 
-// because Vite/Rollup static analysis will miss them during the build.
+// --- CONFIGURATION ---
 const supabaseUrl = clean(env.VITE_SUPABASE_URL);
 const supabaseKey = clean(env.VITE_SUPABASE_ANON_KEY);
-// --- CONFIGURATION END ---
 
-// Create the client if keys exist and look roughly valid
-export const supabase = (supabaseUrl.startsWith("http") && supabaseKey.length > 20) 
+// Validation
+const isValid = supabaseUrl.startsWith("http") && supabaseKey.length > 0;
+
+// Create the client
+export const supabase = isValid 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
 
-if (supabase) {
-    console.log("✅ Supabase initialized successfully");
+// Console Diagnostics
+if (isValid) {
+    console.log("✅ Supabase Client Initialized");
 } else {
-    console.log("⚠️ Supabase keys missing or invalid. Running in LOCAL DEMO MODE.");
-    console.log("DEBUG: URL Length:", supabaseUrl.length, "Key Length:", supabaseKey.length);
+    console.warn("⚠️ Supabase Credentials Missing. App running in LOCAL/OFFLINE mode.");
+    console.log("To connect a database:");
+    console.log("1. Create project at https://supabase.com");
+    console.log("2. Create .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY");
 }

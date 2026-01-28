@@ -185,26 +185,20 @@ const initializeData = async () => {
         if (localData) {
             const parsed = JSON.parse(localData);
             setGlobalData(parsed);
-            // Mark as loaded immediately if we have local data
             setGlobalIsLoaded(true); 
         }
     } catch(e) {
         console.warn("Local storage error:", e);
     }
 
-    // Force load after 2 seconds max, regardless of fetch status
-    // This prevents the "blank screen" if the DB connection hangs
-    const timeoutId = setTimeout(() => {
-        if (!globalIsLoaded) {
-            console.warn("Initialization timed out, forcing load.");
-            setGlobalIsLoaded(true);
-        }
-    }, 2000);
+    // Safety timeout to prevent white screen if DB hangs
+    setTimeout(() => {
+        if (!globalIsLoaded) setGlobalIsLoaded(true);
+    }, 1500);
 
-    // If no Supabase and no Custom Server, just stop here and mark loaded
+    // If no external backend configured, we are done
     if (!USE_CUSTOM_SERVER && !supabase) {
         setGlobalIsLoaded(true);
-        clearTimeout(timeoutId);
         return;
     }
 
@@ -217,23 +211,24 @@ const initializeData = async () => {
                 setGlobalData(jsonData);
             }
         } else if (supabase) {
-            const { data: dbData } = await supabase
+            // Check if table exists and get data
+            const { data: dbData, error } = await supabase
                 .from('portfolio_data')
                 .select('content')
                 .eq('id', 1)
                 .single();
 
-            if (dbData && dbData.content) {
+            if (!error && dbData && dbData.content) {
                 setGlobalData(dbData.content);
-                // Update local storage backup
                 localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
+            } else if (error) {
+                console.warn("Supabase fetch error (running offline):", error.message);
             }
         }
     } catch (e) {
         console.error("Background fetch failed", e);
     } finally {
         setGlobalIsLoaded(true);
-        clearTimeout(timeoutId);
     }
 };
 
@@ -248,17 +243,12 @@ export const useStore = () => {
     const listener = () => forceUpdate(n => n + 1);
     listeners.push(listener);
     
-    // Safety check: ensure isLoaded is true if data exists
+    // Check safety
     if (!globalIsLoaded && globalData) {
-         // If for some reason globalIsLoaded is false but we have data, fix it
-         // This can happen due to race conditions in strict mode
          const t = setTimeout(() => {
              if (!globalIsLoaded) setGlobalIsLoaded(true);
          }, 500);
-         return () => {
-             clearTimeout(t);
-             listeners = listeners.filter(l => l !== listener);
-         }
+         return () => { clearTimeout(t); listeners = listeners.filter(l => l !== listener); }
     }
 
     return () => {
@@ -269,7 +259,7 @@ export const useStore = () => {
   const saveData = async (newData: AppData) => {
     try {
       setGlobalData(newData);
-      localStorage.setItem('portfolio_data', JSON.stringify(newData)); // Always update local backup
+      localStorage.setItem('portfolio_data', JSON.stringify(newData));
 
       if (USE_CUSTOM_SERVER) {
           await fetch(`${CUSTOM_API_URL}/portfolio`, {
@@ -282,7 +272,10 @@ export const useStore = () => {
         const { error } = await supabase
             .from('portfolio_data')
             .upsert({ id: 1, content: newData });
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Save Error:", error.message);
+            alert("Saved locally, but failed to save to Cloud. Check your internet or Supabase keys.");
+        }
       } 
     } catch (e) {
       console.error("Failed to save data:", e);
