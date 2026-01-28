@@ -179,23 +179,28 @@ const setGlobalIsLoaded = (loaded: boolean) => {
 
 // --- INITIALIZATION LOGIC ---
 const initializeData = async () => {
-    // Attempt to load from localStorage immediately to show *something* while fetching
-    const localData = localStorage.getItem('portfolio_data');
-    if (localData) {
-        try {
-            setGlobalData(JSON.parse(localData));
-            // Mark as loaded immediately if we have local data, then fetch fresh data in background
+    // 1. Attempt to load from localStorage immediately
+    // This allows the site to show something instantly while the network request happens
+    try {
+        const localData = localStorage.getItem('portfolio_data');
+        if (localData) {
+            const parsed = JSON.parse(localData);
+            setGlobalData(parsed);
+            // Crucial: Mark as loaded immediately if we have ANY data
             setGlobalIsLoaded(true); 
-        } catch(e) {}
+        }
+    } catch(e) {
+        console.warn("Local storage error:", e);
     }
 
-    // If no Supabase and no Custom Server, just stop here (Local Mode)
+    // If no Supabase and no Custom Server, just stop here and mark loaded
     if (!USE_CUSTOM_SERVER && !supabase) {
         setGlobalIsLoaded(true);
         return;
     }
 
-    // Background fetch to update data
+    // 2. Background fetch to update data
+    // We do NOT await this in a way that blocks the UI if we already loaded local data
     try {
         if (USE_CUSTOM_SERVER) {
             const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
@@ -212,11 +217,14 @@ const initializeData = async () => {
 
             if (dbData && dbData.content) {
                 setGlobalData(dbData.content);
+                // Update local storage backup
+                localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
             }
         }
     } catch (e) {
         console.error("Background fetch failed", e);
     } finally {
+        // Ensure we are marked as loaded regardless of network success/failure
         setGlobalIsLoaded(true);
     }
 };
@@ -231,6 +239,22 @@ export const useStore = () => {
   useEffect(() => {
     const listener = () => forceUpdate(n => n + 1);
     listeners.push(listener);
+    
+    // Safety check: if for some reason init didn't fire or hang, force it
+    if (!globalIsLoaded) {
+        // Check if we already have data in memory
+        if (globalData) {
+            setGlobalIsLoaded(true);
+        } else {
+            // Fallback timeout
+            const t = setTimeout(() => setGlobalIsLoaded(true), 1000);
+            return () => {
+                clearTimeout(t);
+                listeners = listeners.filter(l => l !== listener);
+            };
+        }
+    }
+
     return () => {
       listeners = listeners.filter(l => l !== listener);
     };
