@@ -39,7 +39,7 @@ const Services: React.FC = () => {
   };
 
   return (
-    <section id="services" className="py-16 bg-cream dark:bg-slate-900 transition-colors duration-300 relative" aria-label="Services">
+    <section id="services" className="py-16 md:py-24 bg-cream dark:bg-slate-900 transition-colors duration-300 relative" aria-label="Services">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
          <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -63,7 +63,7 @@ const Services: React.FC = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover="hover"
-                className="group bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full"
+                className="group bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full active:scale-[0.98]"
               >
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" aria-hidden="true">
                   <Icon size={80} />
@@ -116,9 +116,9 @@ const Services: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col"
+                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-2xl w-[95%] md:w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col"
               >
-                <div className="p-8 pb-0 flex justify-between items-start sticky top-0 bg-white dark:bg-slate-900 z-10 border-b border-transparent">
+                <div className="p-6 md:p-8 pb-0 flex justify-between items-start sticky top-0 bg-white dark:bg-slate-900 z-10 border-b border-transparent">
                    <div className="flex items-center gap-4">
                       <div className="p-3 bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-xl text-primary">
                         {(() => {
@@ -126,23 +126,23 @@ const Services: React.FC = () => {
                             return <Icon size={28} />;
                         })()}
                       </div>
-                      <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+                      <h3 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
                         {selectedService.title}
                       </h3>
                    </div>
                    <button 
                     onClick={() => setSelectedService(null)}
-                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary flex-shrink-0"
                    >
                      <X size={24} />
                    </button>
                 </div>
                 
-                <div className="p-8">
+                <div className="p-6 md:p-8">
                   {/* Short Description Section */}
                   <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6">
                       <h4 className="text-sm font-bold text-primary uppercase tracking-wider mb-2">Overview</h4>
-                      <p className="text-xl font-medium text-slate-900 dark:text-white leading-relaxed">
+                      <p className="text-lg md:text-xl font-medium text-slate-900 dark:text-white leading-relaxed">
                         {selectedService.description}
                       </p>
                   </div>
@@ -172,11 +172,11 @@ const Services: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-8 pt-0 mt-auto flex justify-end gap-4 bg-white dark:bg-slate-900 sticky bottom-0 border-t border-slate-100 dark:border-slate-800">
-                  <Button variant="ghost" onClick={() => setSelectedService(null)}>
+                <div className="p-6 md:p-8 pt-0 mt-auto flex flex-col sm:flex-row justify-end gap-4 bg-white dark:bg-slate-900 sticky bottom-0 border-t border-slate-100 dark:border-slate-800">
+                  <Button variant="ghost" onClick={() => setSelectedService(null)} className="w-full sm:w-auto">
                     Close
                   </Button>
-                  <Button href="#contact" onClick={handleDiscussClick}>
+                  <Button href="#contact" onClick={handleDiscussClick} className="w-full sm:w-auto">
                     Let's Discuss
                   </Button>
                 </div>

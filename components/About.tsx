@@ -8,7 +8,7 @@ const About: React.FC = () => {
   const { about } = data;
 
   return (
-    <section id="about" className="py-16 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
+    <section id="about" className="py-16 md:py-24 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
@@ -29,9 +29,9 @@ const About: React.FC = () => {
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="md:col-span-7 space-y-8"
+            className="md:col-span-12 lg:col-span-7 space-y-8"
           >
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight text-center md:text-left">
               {about.title}
             </h3>
             
@@ -79,7 +79,7 @@ const About: React.FC = () => {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="md:col-span-5 flex flex-col gap-6 lg:pt-8"
+            className="md:col-span-12 lg:col-span-5 flex flex-col gap-6 lg:pt-8"
           >
              <motion.div 
                whileHover={{ scale: 1.02 }}
@@ -99,11 +99,11 @@ const About: React.FC = () => {
                </div>
              </motion.div>
 
-             <div className="flex gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                <motion.div 
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 className="flex-1 bg-gradient-to-br from-primary to-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-primary/20 cursor-pointer"
+                 className="bg-gradient-to-br from-primary to-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-primary/20 cursor-pointer"
                >
                   <Target className="mb-3 opacity-80" size={28} />
                   <p className="text-3xl font-extrabold">{about.stats.projectsCompleted}</p>
@@ -112,7 +112,7 @@ const About: React.FC = () => {
                <motion.div 
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
-                 className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-lg cursor-pointer hover:shadow-xl transition-all"
                >
                   <Zap className="mb-3 text-yellow-500" size={28} />
                   <p className="text-3xl font-extrabold text-slate-900 dark:text-white">{about.stats.deliverySpeed}</p>

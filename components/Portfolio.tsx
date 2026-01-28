@@ -64,7 +64,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
         </div>
       </div>
 
-      <div className="p-8 flex flex-col flex-grow relative z-0">
+      <div className="p-6 md:p-8 flex flex-col flex-grow relative z-0">
         <div className="flex justify-between items-center mb-4">
           <span className="text-xs font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-1 rounded">{project.role}</span>
           <div className="flex gap-2">
@@ -170,7 +170,7 @@ const Portfolio: React.FC = () => {
   };
 
   return (
-    <section id="portfolio" className="py-16 bg-white dark:bg-slate-950 transition-colors duration-300 relative" aria-label="Portfolio Projects">
+    <section id="portfolio" className="py-16 md:py-24 bg-white dark:bg-slate-950 transition-colors duration-300 relative" aria-label="Portfolio Projects">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -183,7 +183,7 @@ const Portfolio: React.FC = () => {
           <div className="h-1.5 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
           {data.projects.map((project, index) => (
             <ProjectCard 
                 key={project.id} 
@@ -210,16 +210,17 @@ const Portfolio: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col relative"
+                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-4xl w-[95%] md:w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col relative"
               >
                 <button 
                   onClick={() => setSelectedProject(null)}
-                  className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/40 dark:bg-black/20 dark:hover:bg-black/40 text-slate-500 dark:text-slate-300 transition-colors z-20 backdrop-blur-md"
+                  className="absolute top-4 right-4 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-30 backdrop-blur-md"
+                  aria-label="Close modal"
                 >
                     <X size={24} />
                 </button>
 
-                <div className="w-full h-64 md:h-80 relative flex-shrink-0 bg-slate-900 group">
+                <div className="w-full h-56 sm:h-72 md:h-80 relative flex-shrink-0 bg-slate-900 group">
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-10 pointer-events-none" />
                     
                     <AnimatePresence mode='wait'>
@@ -237,10 +238,16 @@ const Portfolio: React.FC = () => {
 
                     {selectedProject.images && selectedProject.images.length > 1 && (
                         <>
-                            <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-0 group-hover:opacity-100">
+                            <button 
+                                onClick={prevImage} 
+                                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            >
                                 <ChevronLeft size={24} />
                             </button>
-                            <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-0 group-hover:opacity-100">
+                            <button 
+                                onClick={nextImage} 
+                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            >
                                 <ChevronRight size={24} />
                             </button>
                             <div className="absolute bottom-6 right-6 md:right-auto md:left-1/2 md:-translate-x-1/2 flex gap-2 z-20 bg-black/20 backdrop-blur-sm p-1.5 rounded-full">
@@ -255,23 +262,23 @@ const Portfolio: React.FC = () => {
                         </>
                     )}
 
-                    <div className="absolute bottom-6 left-6 md:left-10 z-20 pointer-events-none">
-                         <span className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-full uppercase tracking-wider mb-3 inline-block">
+                    <div className="absolute bottom-6 left-6 md:left-10 z-20 pointer-events-none pr-16 md:pr-0">
+                         <span className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-full uppercase tracking-wider mb-3 inline-block shadow-sm">
                              {selectedProject.role}
                          </span>
-                         <h3 className="text-3xl md:text-4xl font-bold text-white shadow-sm">
+                         <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shadow-sm leading-tight">
                              {selectedProject.title}
                          </h3>
                     </div>
                 </div>
 
                 <div className="p-6 md:p-10">
-                    <div className="flex flex-col md:flex-row gap-10">
+                    <div className="flex flex-col md:flex-row gap-8 md:gap-10">
                         <div className="flex-1 space-y-8">
                              {/* Short Description / Summary */}
                              <div className="border-b border-slate-100 dark:border-slate-800 pb-6">
                                 <h4 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Summary</h4>
-                                <p className="text-xl font-medium text-slate-900 dark:text-white leading-relaxed">
+                                <p className="text-lg md:text-xl font-medium text-slate-900 dark:text-white leading-relaxed">
                                     {selectedProject.description}
                                 </p>
                              </div>
@@ -279,7 +286,7 @@ const Portfolio: React.FC = () => {
                              {/* Long Description / Details */}
                              <div>
                                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Detailed Overview</h4>
-                                <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg whitespace-pre-wrap">
+                                <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base md:text-lg whitespace-pre-wrap">
                                     {selectedProject.longDescription}
                                 </p>
                              </div>

@@ -44,8 +44,11 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+    setIsOpen(false);
+    
     const targetId = href.replace('#', '');
     const element = document.getElementById(targetId);
+    
     if (element) {
       const headerOffset = 80;
       const elementPosition = element.getBoundingClientRect().top;
@@ -55,15 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
         top: offsetPosition,
         behavior: "smooth"
       });
-      
-      try {
-        // Attempt to update URL, but fail silently if blocked (e.g. inside a sandboxed iframe or blob)
-        window.history.pushState(null, '', href);
-      } catch (err) {
-        // Ignore SecurityError
-      }
     }
-    setIsOpen(false);
   };
 
   const navLinks = [
@@ -75,21 +70,33 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
     { name: 'Contact', href: '#contact' },
   ];
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   return (
     <nav 
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled 
-          ? 'bg-cream/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm' 
+        scrolled || isOpen
+          ? 'bg-cream/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm' 
           : 'bg-transparent'
       }`}
       aria-label="Main Navigation"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 z-50">
             <a 
               href="#home" 
-              onClick={(e) => handleNavClick(e, '#home')} 
+              onClick={(e) => handleNavClick(e, '#home')}
               className="group flex items-center gap-2"
               aria-label="Immanuel Gondwe Home"
             >
@@ -145,8 +152,8 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="-mr-2 flex md:hidden items-center space-x-4">
+          {/* Mobile Menu Controls */}
+          <div className="-mr-2 flex md:hidden items-center space-x-4 z-50">
              <button 
                 onClick={toggleTheme} 
                 className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
@@ -167,32 +174,41 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             id="mobile-menu"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-cream/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 overflow-hidden"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 top-20 z-40 md:hidden bg-cream dark:bg-slate-950 flex flex-col overflow-y-auto border-t border-slate-200 dark:border-slate-800"
           >
-            <div className="px-4 pt-2 pb-6 space-y-1">
-              {navLinks.map((link) => (
-                <a
+            <div className="px-4 py-8 space-y-4 flex flex-col items-center justify-center min-h-[50vh]">
+              {navLinks.map((link, i) => (
+                <motion.a
                   key={link.name}
                   href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className={`block px-3 py-3 rounded-lg text-base font-medium
+                  onClick={(e: React.MouseEvent<HTMLAnchorElement>) => handleNavClick(e, link.href)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={`block px-6 py-4 rounded-2xl text-xl font-bold text-center w-full max-w-xs transition-all duration-200
                     ${activeSection === link.href.substring(1)
-                      ? 'bg-primary/10 text-primary dark:text-white'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-white hover:bg-white dark:hover:bg-slate-900'
+                      ? 'bg-primary/10 text-primary dark:text-white shadow-sm border border-primary/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-white dark:hover:bg-slate-900'
                     }`}
                   aria-current={activeSection === link.href.substring(1) ? 'page' : undefined}
                 >
                   {link.name}
-                </a>
+                </motion.a>
               ))}
+            </div>
+            
+            {/* Mobile Menu Footer Decoration */}
+            <div className="mt-auto pb-8 text-center text-slate-400 text-sm">
+                <p>© {new Date().getFullYear()} Immanuel Gondwe</p>
             </div>
           </motion.div>
         )}
