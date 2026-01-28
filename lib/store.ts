@@ -180,27 +180,35 @@ const setGlobalIsLoaded = (loaded: boolean) => {
 // --- INITIALIZATION LOGIC ---
 const initializeData = async () => {
     // 1. Attempt to load from localStorage immediately
-    // This allows the site to show something instantly while the network request happens
     try {
         const localData = localStorage.getItem('portfolio_data');
         if (localData) {
             const parsed = JSON.parse(localData);
             setGlobalData(parsed);
-            // Crucial: Mark as loaded immediately if we have ANY data
+            // Mark as loaded immediately if we have local data
             setGlobalIsLoaded(true); 
         }
     } catch(e) {
         console.warn("Local storage error:", e);
     }
 
+    // Force load after 2 seconds max, regardless of fetch status
+    // This prevents the "blank screen" if the DB connection hangs
+    const timeoutId = setTimeout(() => {
+        if (!globalIsLoaded) {
+            console.warn("Initialization timed out, forcing load.");
+            setGlobalIsLoaded(true);
+        }
+    }, 2000);
+
     // If no Supabase and no Custom Server, just stop here and mark loaded
     if (!USE_CUSTOM_SERVER && !supabase) {
         setGlobalIsLoaded(true);
+        clearTimeout(timeoutId);
         return;
     }
 
     // 2. Background fetch to update data
-    // We do NOT await this in a way that blocks the UI if we already loaded local data
     try {
         if (USE_CUSTOM_SERVER) {
             const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
@@ -224,8 +232,8 @@ const initializeData = async () => {
     } catch (e) {
         console.error("Background fetch failed", e);
     } finally {
-        // Ensure we are marked as loaded regardless of network success/failure
         setGlobalIsLoaded(true);
+        clearTimeout(timeoutId);
     }
 };
 
@@ -240,19 +248,17 @@ export const useStore = () => {
     const listener = () => forceUpdate(n => n + 1);
     listeners.push(listener);
     
-    // Safety check: if for some reason init didn't fire or hang, force it
-    if (!globalIsLoaded) {
-        // Check if we already have data in memory
-        if (globalData) {
-            setGlobalIsLoaded(true);
-        } else {
-            // Fallback timeout
-            const t = setTimeout(() => setGlobalIsLoaded(true), 1000);
-            return () => {
-                clearTimeout(t);
-                listeners = listeners.filter(l => l !== listener);
-            };
-        }
+    // Safety check: ensure isLoaded is true if data exists
+    if (!globalIsLoaded && globalData) {
+         // If for some reason globalIsLoaded is false but we have data, fix it
+         // This can happen due to race conditions in strict mode
+         const t = setTimeout(() => {
+             if (!globalIsLoaded) setGlobalIsLoaded(true);
+         }, 500);
+         return () => {
+             clearTimeout(t);
+             listeners = listeners.filter(l => l !== listener);
+         }
     }
 
     return () => {
