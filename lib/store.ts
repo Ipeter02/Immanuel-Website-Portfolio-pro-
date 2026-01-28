@@ -5,7 +5,6 @@ import { supabase } from './supabase';
 // Check if we are using the custom backend
 const env = (import.meta as any).env;
 const USE_CUSTOM_SERVER = env?.VITE_USE_CUSTOM_SERVER === 'true';
-// Allow production URL via env var, fallback to localhost
 const CUSTOM_API_URL = env?.VITE_CUSTOM_API_URL || 'http://localhost:3001/api';
 
 const defaultHero: HeroData = {
@@ -160,119 +159,132 @@ const initialData: AppData = {
   settings: defaultSettings
 };
 
-// Custom Hook to access and modify data via Supabase, Custom Server, or LocalStorage
-export const useStore = () => {
-  const [data, setData] = useState<AppData>(initialData);
-  const [isLoaded, setIsLoaded] = useState(false);
+// --- GLOBAL STATE SINGLETON ---
+// This ensures all components share the same data and loading state
+let globalData: AppData = initialData;
+let globalIsLoaded = false;
+let listeners: (() => void)[] = [];
 
-  useEffect(() => {
-    // Define an async function to fetch data
-    const fetchData = async () => {
-        // --- Option 1: Custom Node.js Server ---
-        if (USE_CUSTOM_SERVER) {
-            try {
+// Helper to notify all components to re-render
+const notify = () => listeners.forEach(l => l());
+
+const setGlobalData = (newData: AppData) => {
+  globalData = newData;
+  notify();
+};
+
+const setGlobalIsLoaded = (loaded: boolean) => {
+  globalIsLoaded = loaded;
+  notify();
+};
+
+// --- INITIALIZATION LOGIC ---
+let initPromise: Promise<void> | null = null;
+
+const initializeData = async () => {
+    // Safety check to prevent running twice
+    if (globalIsLoaded) return;
+
+    // Timeout Promise: If data fetch takes > 3 seconds, force load with defaults
+    const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+            console.warn("⚠️ Data fetch timed out. Using default content.");
+            resolve("TIMEOUT");
+        }, 3000);
+    });
+
+    // Fetch Promise: The actual data loading logic
+    const fetchPromise = (async () => {
+        try {
+            // Option 1: Custom Server
+            if (USE_CUSTOM_SERVER) {
                 const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
                 if (res.ok) {
                     const jsonData = await res.json();
-                    setData(jsonData);
+                    setGlobalData(jsonData);
                 } else {
-                   // If server is clean/empty, init with default
-                   await fetch(`${CUSTOM_API_URL}/portfolio`, {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify(initialData)
-                   });
+                    // Init server with defaults
+                    await fetch(`${CUSTOM_API_URL}/portfolio`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(initialData)
+                    });
                 }
-            } catch (err) {
-                console.error("Custom Server Error:", err);
-            }
-            setIsLoaded(true);
-        }
-        // --- Option 2: Supabase ---
-        else if (supabase) {
-            try {
-                // Fetch the single row with ID 1
+            } 
+            // Option 2: Supabase
+            else if (supabase) {
                 const { data: dbData, error } = await supabase
                     .from('portfolio_data')
                     .select('content')
                     .eq('id', 1)
                     .single();
 
-                if (error) {
-                    if (error.code === 'PGRST116') { // Row not found
-                        // Create initial row
-                        await supabase.from('portfolio_data').insert([{ id: 1, content: initialData }]);
-                        setData(initialData);
-                    } else if (error.code === '42P01') { // Table missing
-                        console.error("Supabase Table Missing. Using default data.");
-                        // DO NOT throw, just use default data so site loads
-                        setData(initialData);
-                    } else {
-                        console.error("Supabase fetch error:", error);
-                        setData(initialData); // Fallback to default
-                    }
-                } else if (dbData && dbData.content) {
-                    setData(dbData.content);
+                if (dbData && dbData.content) {
+                    setGlobalData(dbData.content);
+                } else if (error && error.code === 'PGRST116') {
+                    // Row not found, create it
+                    await supabase.from('portfolio_data').insert([{ id: 1, content: initialData }]);
+                } else {
+                    console.log("Supabase unavailable or empty, using defaults");
                 }
-
-                setIsLoaded(true);
 
                 // Subscribe to real-time changes
-                const channel = supabase.channel('schema-db-changes')
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: 'UPDATE',
-                            schema: 'public',
-                            table: 'portfolio_data',
-                            filter: 'id=eq.1',
-                        },
-                        (payload) => {
-                            if (payload.new && payload.new.content) {
-                                setData(payload.new.content);
-                            }
+                supabase.channel('schema-db-changes')
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portfolio_data', filter: 'id=eq.1' }, 
+                    (payload) => {
+                        if (payload.new && payload.new.content) {
+                            setGlobalData(payload.new.content);
                         }
-                    )
+                    })
                     .subscribe();
-
-                return () => {
-                    supabase.removeChannel(channel);
-                };
-
-            } catch (err) {
-                console.error("Supabase connection failed:", err);
-                setData(initialData); // Hard Fallback
-                setIsLoaded(true); // Force loaded so preloader vanishes
-            }
-        } 
-        // --- Option 3: Local Storage (Fallback) ---
-        else {
-            const localData = localStorage.getItem('portfolio_data');
-            if (localData) {
-                try {
-                    setData(JSON.parse(localData));
-                } catch (e) {
-                    console.error("Local data parse error", e);
-                    setData(initialData);
+            } 
+            // Option 3: Local Storage
+            else {
+                const localData = localStorage.getItem('portfolio_data');
+                if (localData) {
+                   setGlobalData(JSON.parse(localData));
+                } else {
+                   localStorage.setItem('portfolio_data', JSON.stringify(initialData));
                 }
-            } else {
-                localStorage.setItem('portfolio_data', JSON.stringify(initialData));
-                setData(initialData);
             }
-            setIsLoaded(true);
+        } catch (e) {
+            console.error("Fetch error, falling back to defaults", e);
         }
-    };
+        return "DONE";
+    })();
 
-    fetchData();
+    // Wait for either the fetch to finish OR the timeout to fire
+    await Promise.race([fetchPromise, timeoutPromise]);
+    
+    // Always mark as loaded so the app displays
+    setGlobalIsLoaded(true);
+};
+
+// --- REACT HOOK ---
+export const useStore = () => {
+  // Use state to force re-render when global data changes
+  const [_, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const listener = () => forceUpdate(n => n + 1);
+    listeners.push(listener);
+    
+    // Trigger initialization if not already started
+    if (!initPromise) {
+        initPromise = initializeData();
+    }
+    
+    return () => {
+      listeners = listeners.filter(l => l !== listener);
+    };
   }, []);
 
   const saveData = async (newData: AppData) => {
     try {
-      // Optimistic update locally
-      setData(newData);
+      // Optimistic update (update UI immediately)
+      setGlobalData(newData);
       
       if (USE_CUSTOM_SERVER) {
-          // Update Custom Server
           await fetch(`${CUSTOM_API_URL}/portfolio`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -280,14 +292,11 @@ export const useStore = () => {
           });
       }
       else if (supabase) {
-        // Update Supabase
         const { error } = await supabase
             .from('portfolio_data')
             .upsert({ id: 1, content: newData });
-            
         if (error) throw error;
       } else {
-        // Update LocalStorage
         localStorage.setItem('portfolio_data', JSON.stringify(newData));
       }
     } catch (e) {
@@ -296,36 +305,36 @@ export const useStore = () => {
     }
   };
 
-  const updateHero = (hero: HeroData) => saveData({ ...data, hero });
-  const updateAbout = (about: AboutData) => saveData({ ...data, about });
+  const updateHero = (hero: HeroData) => saveData({ ...globalData, hero });
+  const updateAbout = (about: AboutData) => saveData({ ...globalData, about });
   
   // Projects
   const addProject = (project: Project) => {
     const newProject = { ...project, id: Date.now() };
-    saveData({ ...data, projects: [newProject, ...data.projects] });
+    saveData({ ...globalData, projects: [newProject, ...globalData.projects] });
   };
   const updateProject = (project: Project) => {
-    saveData({ ...data, projects: data.projects.map(p => p.id === project.id ? project : p) });
+    saveData({ ...globalData, projects: globalData.projects.map(p => p.id === project.id ? project : p) });
   };
   const deleteProject = (id: number) => {
-    saveData({ ...data, projects: data.projects.filter(p => p.id !== id) });
+    saveData({ ...globalData, projects: globalData.projects.filter(p => p.id !== id) });
   };
 
   // Skills
   const updateSkills = (skills: SkillCategory[]) => {
-    saveData({ ...data, skills });
+    saveData({ ...globalData, skills });
   };
 
   // Services
   const addService = (service: Service) => {
     const newService = { ...service, id: Math.random().toString(36).substr(2, 9) };
-    saveData({ ...data, services: [...data.services, newService] });
+    saveData({ ...globalData, services: [...globalData.services, newService] });
   };
   const updateService = (service: Service) => {
-    saveData({ ...data, services: data.services.map(s => s.id === service.id ? service : s) });
+    saveData({ ...globalData, services: globalData.services.map(s => s.id === service.id ? service : s) });
   };
   const deleteService = (id: string) => {
-    saveData({ ...data, services: data.services.filter(s => s.id !== id) });
+    saveData({ ...globalData, services: globalData.services.filter(s => s.id !== id) });
   };
 
   // Messages
@@ -336,19 +345,19 @@ export const useStore = () => {
       date: new Date().toISOString(),
       read: false
     };
-    saveData({ ...data, messages: [newMessage, ...data.messages] });
+    saveData({ ...globalData, messages: [newMessage, ...globalData.messages] });
     return true;
   };
   const markMessageRead = (id: string) => {
-    saveData({ ...data, messages: data.messages.map(m => m.id === id ? { ...m, read: true } : m) });
+    saveData({ ...globalData, messages: globalData.messages.map(m => m.id === id ? { ...m, read: true } : m) });
   };
   const deleteMessage = (id: string) => {
-    saveData({ ...data, messages: data.messages.filter(m => m.id !== id) });
+    saveData({ ...globalData, messages: globalData.messages.filter(m => m.id !== id) });
   };
 
   // Settings
   const updateSettings = (settings: AppSettings) => {
-    saveData({ ...data, settings });
+    saveData({ ...globalData, settings });
   };
 
   const resetData = () => {
@@ -358,8 +367,8 @@ export const useStore = () => {
   };
 
   return {
-    data,
-    isLoaded,
+    data: globalData,
+    isLoaded: globalIsLoaded,
     updateHero,
     updateAbout,
     addProject,
