@@ -23,7 +23,7 @@ const IconMap: any = {
 };
 
 const Services: React.FC = () => {
-  const { data, isLoaded } = useStore();
+  const { data } = useStore();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const handleDiscussClick = (e: React.MouseEvent) => {
@@ -37,8 +37,6 @@ const Services: React.FC = () => {
       window.scrollTo({ top: offsetPosition, behavior: "smooth" });
     }
   };
-
-  if (!isLoaded) return null;
 
   return (
     <section id="services" className="py-16 bg-cream dark:bg-slate-900 transition-colors duration-300 relative" aria-label="Services">

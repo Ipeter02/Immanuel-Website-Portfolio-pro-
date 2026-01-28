@@ -21,9 +21,7 @@ const IconMap: any = {
 };
 
 const Skills: React.FC = () => {
-  const { data, isLoaded } = useStore();
-
-  if (!isLoaded) return null;
+  const { data } = useStore();
 
   return (
     <section id="skills" className="py-16 bg-cream dark:bg-slate-900 transition-colors duration-300" aria-label="Technical Skills">

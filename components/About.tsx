@@ -4,10 +4,7 @@ import { Code2, Target, Zap, BookOpen } from 'lucide-react';
 import { useStore } from '../lib/store';
 
 const About: React.FC = () => {
-  const { data, isLoaded } = useStore();
-
-  if (!isLoaded) return null;
-
+  const { data } = useStore();
   const { about } = data;
 
   return (

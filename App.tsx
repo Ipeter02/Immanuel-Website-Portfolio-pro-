@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -12,7 +12,6 @@ import Footer from './components/Footer';
 import Admin from './components/admin/Admin';
 import Preloader from './components/ui/Preloader';
 import ScrollToTop from './components/ui/ScrollToTop';
-import Security from './components/Security'; // Import Security Component
 import { useStore } from './lib/store';
 
 const PublicPortfolio = ({ isDark, toggleTheme }: { isDark: boolean, toggleTheme: () => void }) => {
@@ -50,20 +49,20 @@ function App() {
     }
   }, []);
 
-  // Manage Preloader Timing - With Safety Fallback
+  // Manage Preloader Timing
   useEffect(() => {
-    // 1. Normal behavior: When data is loaded, wait 2s then show site
+    // If loaded, wait just a moment for smooth transition
     if (isLoaded) {
       const timer = setTimeout(() => {
         setShowPreloader(false);
-      }, 2000); 
+      }, 1500); 
       return () => clearTimeout(timer);
     }
 
-    // 2. Safety behavior: Force show site after 4s even if data isn't loaded (prevents blank screen)
+    // Safety: Force show site after 3s max
     const safetyTimer = setTimeout(() => {
         setShowPreloader(false);
-    }, 4000);
+    }, 3000);
 
     return () => clearTimeout(safetyTimer);
   }, [isLoaded]);
@@ -82,7 +81,6 @@ function App() {
 
   return (
     <Router>
-      <Security /> {/* Enable Security Measures */}
       <AnimatePresence mode="wait">
         {showPreloader ? (
           <Preloader key="preloader" />

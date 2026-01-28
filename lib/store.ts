@@ -160,7 +160,6 @@ const initialData: AppData = {
 };
 
 // --- GLOBAL STATE SINGLETON ---
-// This ensures all components share the same data and loading state
 let globalData: AppData = initialData;
 let globalIsLoaded = false;
 let listeners: (() => void)[] = [];
@@ -179,101 +178,59 @@ const setGlobalIsLoaded = (loaded: boolean) => {
 };
 
 // --- INITIALIZATION LOGIC ---
-let initPromise: Promise<void> | null = null;
-
 const initializeData = async () => {
-    // Safety check to prevent running twice
-    if (globalIsLoaded) return;
-
-    // Timeout Promise: If data fetch takes > 3 seconds, force load with defaults
-    const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => {
-            console.warn("⚠️ Data fetch timed out. Using default content.");
-            resolve("TIMEOUT");
-        }, 3000);
-    });
-
-    // Fetch Promise: The actual data loading logic
-    const fetchPromise = (async () => {
+    // Attempt to load from localStorage immediately to show *something* while fetching
+    const localData = localStorage.getItem('portfolio_data');
+    if (localData) {
         try {
-            // Option 1: Custom Server
-            if (USE_CUSTOM_SERVER) {
-                const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
-                if (res.ok) {
-                    const jsonData = await res.json();
-                    setGlobalData(jsonData);
-                } else {
-                    // Init server with defaults
-                    await fetch(`${CUSTOM_API_URL}/portfolio`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(initialData)
-                    });
-                }
-            } 
-            // Option 2: Supabase
-            else if (supabase) {
-                const { data: dbData, error } = await supabase
-                    .from('portfolio_data')
-                    .select('content')
-                    .eq('id', 1)
-                    .single();
+            setGlobalData(JSON.parse(localData));
+            // Mark as loaded immediately if we have local data, then fetch fresh data in background
+            setGlobalIsLoaded(true); 
+        } catch(e) {}
+    }
 
-                if (dbData && dbData.content) {
-                    setGlobalData(dbData.content);
-                } else if (error && error.code === 'PGRST116') {
-                    // Row not found, create it
-                    await supabase.from('portfolio_data').insert([{ id: 1, content: initialData }]);
-                } else {
-                    console.log("Supabase unavailable or empty, using defaults");
-                }
+    // If no Supabase and no Custom Server, just stop here (Local Mode)
+    if (!USE_CUSTOM_SERVER && !supabase) {
+        setGlobalIsLoaded(true);
+        return;
+    }
 
-                // Subscribe to real-time changes
-                supabase.channel('schema-db-changes')
-                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portfolio_data', filter: 'id=eq.1' }, 
-                    (payload) => {
-                        if (payload.new && payload.new.content) {
-                            setGlobalData(payload.new.content);
-                        }
-                    })
-                    .subscribe();
-            } 
-            // Option 3: Local Storage
-            else {
-                const localData = localStorage.getItem('portfolio_data');
-                if (localData) {
-                   setGlobalData(JSON.parse(localData));
-                } else {
-                   localStorage.setItem('portfolio_data', JSON.stringify(initialData));
-                }
+    // Background fetch to update data
+    try {
+        if (USE_CUSTOM_SERVER) {
+            const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
+            if (res.ok) {
+                const jsonData = await res.json();
+                setGlobalData(jsonData);
             }
-        } catch (e) {
-            console.error("Fetch error, falling back to defaults", e);
-        }
-        return "DONE";
-    })();
+        } else if (supabase) {
+            const { data: dbData } = await supabase
+                .from('portfolio_data')
+                .select('content')
+                .eq('id', 1)
+                .single();
 
-    // Wait for either the fetch to finish OR the timeout to fire
-    await Promise.race([fetchPromise, timeoutPromise]);
-    
-    // Always mark as loaded so the app displays
-    setGlobalIsLoaded(true);
+            if (dbData && dbData.content) {
+                setGlobalData(dbData.content);
+            }
+        }
+    } catch (e) {
+        console.error("Background fetch failed", e);
+    } finally {
+        setGlobalIsLoaded(true);
+    }
 };
+
+// Start initialization immediately
+initializeData();
 
 // --- REACT HOOK ---
 export const useStore = () => {
-  // Use state to force re-render when global data changes
   const [_, forceUpdate] = useState(0);
 
   useEffect(() => {
     const listener = () => forceUpdate(n => n + 1);
     listeners.push(listener);
-    
-    // Trigger initialization if not already started
-    if (!initPromise) {
-        initPromise = initializeData();
-    }
-    
     return () => {
       listeners = listeners.filter(l => l !== listener);
     };
@@ -281,9 +238,9 @@ export const useStore = () => {
 
   const saveData = async (newData: AppData) => {
     try {
-      // Optimistic update (update UI immediately)
       setGlobalData(newData);
-      
+      localStorage.setItem('portfolio_data', JSON.stringify(newData)); // Always update local backup
+
       if (USE_CUSTOM_SERVER) {
           await fetch(`${CUSTOM_API_URL}/portfolio`, {
               method: 'POST',
@@ -296,92 +253,36 @@ export const useStore = () => {
             .from('portfolio_data')
             .upsert({ id: 1, content: newData });
         if (error) throw error;
-      } else {
-        localStorage.setItem('portfolio_data', JSON.stringify(newData));
-      }
+      } 
     } catch (e) {
       console.error("Failed to save data:", e);
-      alert("Error saving data. Check console.");
     }
   };
 
+  // Helper functions
   const updateHero = (hero: HeroData) => saveData({ ...globalData, hero });
   const updateAbout = (about: AboutData) => saveData({ ...globalData, about });
-  
-  // Projects
-  const addProject = (project: Project) => {
-    const newProject = { ...project, id: Date.now() };
-    saveData({ ...globalData, projects: [newProject, ...globalData.projects] });
-  };
-  const updateProject = (project: Project) => {
-    saveData({ ...globalData, projects: globalData.projects.map(p => p.id === project.id ? project : p) });
-  };
-  const deleteProject = (id: number) => {
-    saveData({ ...globalData, projects: globalData.projects.filter(p => p.id !== id) });
-  };
-
-  // Skills
-  const updateSkills = (skills: SkillCategory[]) => {
-    saveData({ ...globalData, skills });
-  };
-
-  // Services
-  const addService = (service: Service) => {
-    const newService = { ...service, id: Math.random().toString(36).substr(2, 9) };
-    saveData({ ...globalData, services: [...globalData.services, newService] });
-  };
-  const updateService = (service: Service) => {
-    saveData({ ...globalData, services: globalData.services.map(s => s.id === service.id ? service : s) });
-  };
-  const deleteService = (id: string) => {
-    saveData({ ...globalData, services: globalData.services.filter(s => s.id !== id) });
-  };
-
-  // Messages
+  const addProject = (project: Project) => saveData({ ...globalData, projects: [{ ...project, id: Date.now() }, ...globalData.projects] });
+  const updateProject = (project: Project) => saveData({ ...globalData, projects: globalData.projects.map(p => p.id === project.id ? project : p) });
+  const deleteProject = (id: number) => saveData({ ...globalData, projects: globalData.projects.filter(p => p.id !== id) });
+  const updateSkills = (skills: SkillCategory[]) => saveData({ ...globalData, skills });
+  const addService = (service: Service) => saveData({ ...globalData, services: [...globalData.services, { ...service, id: Math.random().toString(36).substr(2, 9) }] });
+  const updateService = (service: Service) => saveData({ ...globalData, services: globalData.services.map(s => s.id === service.id ? service : s) });
+  const deleteService = (id: string) => saveData({ ...globalData, services: globalData.services.filter(s => s.id !== id) });
   const addMessage = (msg: Omit<Message, 'id' | 'date' | 'read'>) => {
-    const newMessage: Message = {
-      ...msg,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString(),
-      read: false
-    };
-    saveData({ ...globalData, messages: [newMessage, ...globalData.messages] });
+    saveData({ ...globalData, messages: [{ ...msg, id: Math.random().toString(36).substr(2, 9), date: new Date().toISOString(), read: false }, ...globalData.messages] });
     return true;
   };
-  const markMessageRead = (id: string) => {
-    saveData({ ...globalData, messages: globalData.messages.map(m => m.id === id ? { ...m, read: true } : m) });
-  };
-  const deleteMessage = (id: string) => {
-    saveData({ ...globalData, messages: globalData.messages.filter(m => m.id !== id) });
-  };
-
-  // Settings
-  const updateSettings = (settings: AppSettings) => {
-    saveData({ ...globalData, settings });
-  };
-
-  const resetData = () => {
-    if (window.confirm("Are you sure? This will wipe the database/storage and restore defaults.")) {
-        saveData(initialData);
-    }
-  };
+  const markMessageRead = (id: string) => saveData({ ...globalData, messages: globalData.messages.map(m => m.id === id ? { ...m, read: true } : m) });
+  const deleteMessage = (id: string) => saveData({ ...globalData, messages: globalData.messages.filter(m => m.id !== id) });
+  const updateSettings = (settings: AppSettings) => saveData({ ...globalData, settings });
+  const resetData = () => { if (window.confirm("Reset all data?")) saveData(initialData); };
 
   return {
     data: globalData,
     isLoaded: globalIsLoaded,
-    updateHero,
-    updateAbout,
-    addProject,
-    updateProject,
-    deleteProject,
-    updateSkills,
-    addService,
-    updateService,
-    deleteService,
-    addMessage,
-    markMessageRead,
-    deleteMessage,
-    updateSettings,
-    resetData
+    updateHero, updateAbout, addProject, updateProject, deleteProject, updateSkills,
+    addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage,
+    updateSettings, resetData
   };
 };

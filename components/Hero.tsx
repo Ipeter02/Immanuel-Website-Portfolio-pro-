@@ -15,10 +15,8 @@ const Hero: React.FC = () => {
   // 3D Tilt Logic
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-
   const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
   const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
-
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
@@ -81,22 +79,16 @@ const Hero: React.FC = () => {
     if (!isLoaded || data.hero.backgroundImages.length <= 1) return;
     const interval = setInterval(() => {
         setCurrentBg(prev => (prev + 1) % data.hero.backgroundImages.length);
-    }, 6000); // 6 seconds per slide
+    }, 6000); 
     return () => clearInterval(interval);
   }, [isLoaded, data.hero.backgroundImages.length]);
 
-  if (!isLoaded) return <div className="min-h-screen bg-cream dark:bg-slate-950"></div>;
-
   const bgImages = data.hero.backgroundImages.length > 0 ? data.hero.backgroundImages : [""];
-
-  // Determine resume link: Use uploaded base64 if available, otherwise fallback to local file
   const resumeLink = data.settings.resumeUrl || "/resume.pdf";
-  // If it's a data URI (uploaded), suggest a filename
   const downloadAttr = data.settings.resumeUrl ? "Immanuel_Gondwe_Resume.pdf" : undefined;
 
   return (
     <section id="home" className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden py-20 lg:py-0" aria-label="Introduction">
-      {/* Background */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-slate-900">
         <AnimatePresence mode="popLayout">
             <motion.img
@@ -117,7 +109,6 @@ const Hero: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full z-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           
-          {/* Text Content */}
           <div className="text-center lg:text-left order-2 lg:order-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -148,7 +139,7 @@ const Hero: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="h-8 mb-8 text-xl md:text-2xl font-mono text-slate-600 dark:text-slate-300"
             >
-              I am a <span className="text-slate-900 dark:text-white border-r-2 border-primary pr-1">{text}</span>
+              I am a <span className="text-slate-900 dark:text-white border-r-2 border-primary pr-1">{text || (data.hero.roles[0] || 'Developer')}</span>
             </motion.div>
 
             <motion.p
@@ -179,7 +170,7 @@ const Hero: React.FC = () => {
                 size="lg" 
                 href={resumeLink}
                 download={downloadAttr}
-                external={!data.settings.resumeUrl} // Open in new tab if it's a URL/path, download directly if base64
+                external={!data.settings.resumeUrl} 
                 className="group relative overflow-hidden border-2 border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary hover:bg-transparent dark:hover:bg-transparent transition-all duration-300"
               >
                 <div className="absolute inset-0 bg-primary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
@@ -191,7 +182,6 @@ const Hero: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Profile Image */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -213,7 +203,6 @@ const Hero: React.FC = () => {
                       className="absolute inset-0 w-full h-full object-cover object-top hover:scale-110 transition-transform duration-700"
                    />
                 </div>
-                {/* Decoration Badges */}
                 <motion.div 
                    className="absolute top-10 -right-2 sm:right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3"
                    style={{ transform: "translateZ(40px)" }}

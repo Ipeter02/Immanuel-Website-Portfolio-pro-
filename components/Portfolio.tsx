@@ -147,7 +147,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
 };
 
 const Portfolio: React.FC = () => {
-  const { data, isLoaded } = useStore();
+  const { data } = useStore();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -168,8 +168,6 @@ const Portfolio: React.FC = () => {
         setActiveImageIndex((prev) => (prev - 1 + selectedProject.images.length) % selectedProject.images.length);
     }
   };
-
-  if (!isLoaded) return null;
 
   return (
     <section id="portfolio" className="py-16 bg-white dark:bg-slate-950 transition-colors duration-300 relative" aria-label="Portfolio Projects">
