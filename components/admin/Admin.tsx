@@ -134,8 +134,13 @@ const Admin: React.FC = () => {
   }
 
   if (!user) {
+    // Check Env Vars for diagnostics
+    const env = (import.meta as any).env;
+    const hasUrl = !!env?.VITE_SUPABASE_URL;
+    const hasKey = !!env?.VITE_SUPABASE_ANON_KEY;
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white font-sans relative overflow-hidden">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white font-sans relative overflow-hidden py-10">
         {/* Background blobs for aesthetics */}
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none opacity-50"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary/20 rounded-full blur-[100px] pointer-events-none opacity-50"></div>
@@ -199,6 +204,40 @@ const Admin: React.FC = () => {
               </div>
             </form>
             
+            {/* Connection Diagnostics for Debugging */}
+            {!supabase && (
+                <div className="mt-8 p-4 rounded-xl bg-slate-900/50 border border-red-500/30 backdrop-blur-sm">
+                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <AlertTriangle size={14} /> Connection Debugger
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span className="text-slate-400">VITE_SUPABASE_URL</span>
+                            <span className={`font-mono ${hasUrl ? "text-green-500" : "text-red-500 font-bold"}`}>
+                                {hasUrl ? "Connected" : "Missing"}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span className="text-slate-400">VITE_SUPABASE_ANON_KEY</span>
+                            <span className={`font-mono ${hasKey ? "text-green-500" : "text-red-500 font-bold"}`}>
+                                {hasKey ? "Connected" : "Missing"}
+                            </span>
+                        </div>
+                        <div className="pt-2">
+                           {(!hasUrl || !hasKey) ? (
+                               <p className="text-slate-500 leading-relaxed">
+                                   Supabase is disconnected. Go to Vercel Settings &gt; Environment Variables and add these keys. <strong>Don't forget to Redeploy!</strong>
+                               </p>
+                           ) : (
+                               <p className="text-green-500 leading-relaxed">
+                                   Keys detected but initialization failed. Check console for details.
+                               </p>
+                           )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <p className="text-center text-slate-600 text-xs mt-8">
                 Portfolio Cloud Admin • {new Date().getFullYear()}
             </p>
