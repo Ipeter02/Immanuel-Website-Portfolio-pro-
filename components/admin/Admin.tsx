@@ -134,10 +134,10 @@ const Admin: React.FC = () => {
   }
 
   if (!user) {
-    // Check Env Vars for diagnostics
-    const env = (import.meta as any).env;
-    const hasUrl = !!env?.VITE_SUPABASE_URL;
-    const hasKey = !!env?.VITE_SUPABASE_ANON_KEY;
+    // Check Env Vars for diagnostics - Access directly for accuracy
+    const env = (import.meta as any).env || {};
+    const hasUrl = !!env.VITE_SUPABASE_URL;
+    const hasKey = !!env.VITE_SUPABASE_ANON_KEY;
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white font-sans relative overflow-hidden py-10">
@@ -214,25 +214,22 @@ const Admin: React.FC = () => {
                         <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                             <span className="text-slate-400">VITE_SUPABASE_URL</span>
                             <span className={`font-mono ${hasUrl ? "text-green-500" : "text-red-500 font-bold"}`}>
-                                {hasUrl ? "Connected" : "Missing"}
+                                {hasUrl ? "Found" : "Missing"}
                             </span>
                         </div>
                         <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                             <span className="text-slate-400">VITE_SUPABASE_ANON_KEY</span>
                             <span className={`font-mono ${hasKey ? "text-green-500" : "text-red-500 font-bold"}`}>
-                                {hasKey ? "Connected" : "Missing"}
+                                {hasKey ? "Found" : "Missing"}
                             </span>
                         </div>
                         <div className="pt-2">
-                           {(!hasUrl || !hasKey) ? (
-                               <p className="text-slate-500 leading-relaxed">
-                                   Supabase is disconnected. Go to Vercel Settings &gt; Environment Variables and add these keys. <strong>Don't forget to Redeploy!</strong>
-                               </p>
-                           ) : (
-                               <p className="text-green-500 leading-relaxed">
-                                   Keys detected but initialization failed. Check console for details.
-                               </p>
-                           )}
+                           <p className="text-slate-400 leading-relaxed mb-2">
+                               If you recently added these to Vercel, you <strong>MUST Redeploy</strong> the project for changes to take effect.
+                           </p>
+                           <p className="text-slate-500 leading-relaxed">
+                               Variables must start with <code>VITE_</code>.
+                           </p>
                         </div>
                     </div>
                 </div>
@@ -249,6 +246,7 @@ const Admin: React.FC = () => {
   return <AdminLayout onLogout={handleLogout} />;
 };
 
+// ... (Rest of the file remains exactly the same)
 // --- Reusable Save Button ---
 const SaveAction = ({ onSave, label = "Save Changes", className = "" }: { onSave: () => void, label?: string, className?: string }) => {
    const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
