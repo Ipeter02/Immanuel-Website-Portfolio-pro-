@@ -40,7 +40,10 @@ if (process.env.MONGO_URI) {
       isMongoConnected = true;
       console.log('✅ Connected to MongoDB');
     })
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    .catch(err => {
+      console.error('❌ MongoDB Connection Error:', err.message);
+      console.log('⚠️ Falling back to local file storage (db.json)');
+    });
 } else {
   console.log('⚠️ No MONGO_URI found in .env. Falling back to local file storage (db.json).');
 }
@@ -93,7 +96,7 @@ app.get('/api/portfolio', async (req, res) => {
   }
 });
 
-// 2. POST/UPDATE Data
+// 2. POST/UPDATE Data (Full Overwrite)
 app.post('/api/portfolio', async (req, res) => {
   const newData = req.body;
 
@@ -105,11 +108,11 @@ app.post('/api/portfolio', async (req, res) => {
         { content: newData },
         { upsert: true, new: true }
       );
-      console.log('Saved to MongoDB');
+      console.log('Saved to MongoDB (Full Update)');
     } else {
       // Save to File
       writeDbFile(newData);
-      console.log('Saved to db.json');
+      console.log('Saved to db.json (Full Update)');
     }
     res.json({ message: 'Data saved successfully', data: newData });
   } catch (error) {
@@ -118,7 +121,48 @@ app.post('/api/portfolio', async (req, res) => {
   }
 });
 
-// 3. Login Endpoint (Simple simulation)
+// 3. POST Contact Message (Incremental Update)
+app.post('/api/contact', async (req, res) => {
+  const newMessage = req.body; // Expects { id, name, email, message, date, read: false }
+
+  try {
+    let currentData;
+
+    if (isMongoConnected) {
+      const doc = await PortfolioModel.findOne({ id: 1 });
+      if (doc) {
+        currentData = doc.content;
+        // Prepend message
+        currentData.messages = [newMessage, ...currentData.messages];
+        
+        await PortfolioModel.findOneAndUpdate(
+            { id: 1 },
+            { content: currentData },
+            { upsert: true }
+        );
+        console.log('Message added to MongoDB');
+      }
+    } else {
+      currentData = readDbFile();
+      if (currentData) {
+        currentData.messages = [newMessage, ...currentData.messages];
+        writeDbFile(currentData);
+        console.log('Message added to db.json');
+      }
+    }
+
+    if (!currentData) {
+        return res.status(500).json({ message: 'Database not initialized' });
+    }
+
+    res.json({ message: 'Message received', success: true });
+  } catch (error) {
+    console.error("Contact API Error:", error);
+    res.status(500).json({ message: 'Error saving message' });
+  }
+});
+
+// 4. Login Endpoint (Simple simulation)
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   // Hardcoded for demo. In production, use MongoDB User collection + bcrypt.
@@ -132,7 +176,7 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-// 4. File Upload Endpoint
+// 5. File Upload Endpoint
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');

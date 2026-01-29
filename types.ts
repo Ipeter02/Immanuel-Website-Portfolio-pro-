@@ -66,7 +66,6 @@ export interface SocialLinks {
   github: string;
   linkedin: string;
   youtube: string;
-  twitter: string;
 }
 
 export interface AppSettings {

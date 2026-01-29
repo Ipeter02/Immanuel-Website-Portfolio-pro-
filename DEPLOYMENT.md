@@ -1,59 +1,86 @@
-# Deployment Guide
+# 🚀 Global Deployment Guide (Free & Permanent)
 
-This portfolio supports two main deployment strategies:
-1.  **Supabase** (Frontend Only, serverless database)
-2.  **MERN Stack** (Frontend + Custom Node.js/MongoDB Backend)
+This guide will help you deploy your portfolio so it is accessible worldwide, completely free, and stores your images/data permanently.
 
----
-
-## Option 1: Supabase Deployment (Recommended)
-
-This is the easiest method. The frontend talks directly to Supabase cloud.
-
-### Phase 1: Database Setup (Supabase)
-
-1.  Go to [Supabase.com](https://supabase.com) and sign up/log in.
-2.  Click **"New Project"**.
-3.  Give it a name and password.
-4.  Wait for the project to initialize.
-5.  **Run the Setup Script**:
-    *   In Supabase dashboard -> **SQL Editor**.
-    *   Copy content from `supabase_setup.sql`.
-    *   Paste and click **RUN**.
-6.  **Get API Keys**:
-    *   Settings -> API.
-    *   Copy **Project URL** and **anon public** Key.
-
-### Phase 2: Deploy to Vercel
-
-1.  Go to [Vercel.com](https://vercel.com).
-2.  Add New Project -> Import from GitHub.
-3.  **Environment Variables**:
-    *   `VITE_SUPABASE_URL`: Your Project URL.
-    *   `VITE_SUPABASE_ANON_KEY`: Your anon key.
-4.  Deploy.
+We will use **Vercel** (Hosting) + **Supabase** (Database & Storage).
 
 ---
 
-## Option 2: MERN Stack Deployment (MongoDB)
+## Step 1: Set up the Database (Supabase)
 
-Use this if you want to run the custom `server/` with MongoDB.
+1.  Go to [Supabase.com](https://supabase.com) and click **"Start your project"**.
+2.  Sign in with GitHub.
+3.  Click **"New Project"**.
+    *   **Name:** `my-portfolio`
+    *   **Database Password:** (Create a strong password and save it)
+    *   **Region:** Choose one close to you (e.g., US East, London, Singapore).
+    *   Click **"Create new project"**.
+4.  Wait for the project to finish "Setting up" (takes about 1-2 minutes).
 
-### Step 1: Deploy Backend (e.g., Render.com)
+### Run the Setup Script
+1.  In your Supabase Dashboard, look at the left sidebar and click on **SQL Editor** (icon looks like a terminal/document).
+2.  Click **"New query"**.
+3.  Copy the code from the file `supabase_setup.sql` in your project folder.
+4.  Paste it into the SQL Editor on the website.
+5.  Click **Run** (bottom right of the editor).
+    *   *Success:* You should see "Success. No rows returned."
 
-1.  Create a separate Git repository for the content inside the `server/` folder (or configure Root Directory in Render).
-2.  Create a **Web Service** on Render.
-3.  **Environment Variables** on Render:
-    *   `MONGO_URI`: Your MongoDB Connection String (from MongoDB Atlas).
-    *   `PORT`: `3001` (or let Render assign one).
-4.  Deploy. Render will give you a URL (e.g., `https://my-portfolio-api.onrender.com`).
+### Get Your API Keys
+1.  On the left sidebar, click the **Settings** icon (gear at the bottom).
+2.  Click **API**.
+3.  Copy these two values (you will need them in Step 3):
+    *   **Project URL** (e.g., `https://xyz.supabase.co`)
+    *   **anon / public** Key (a long string starting with `ey...`)
 
-### Step 2: Deploy Frontend (Vercel)
+---
 
-1.  Deploy the frontend code to Vercel.
-2.  **Environment Variables** on Vercel:
-    *   `VITE_USE_CUSTOM_SERVER`: `true`
-    *   `VITE_CUSTOM_API_URL`: `https://my-portfolio-api.onrender.com/api` (The URL from Step 1 + `/api`)
-3.  Redeploy the frontend.
+## Step 2: Push Code to GitHub
 
-*Note: For the MERN stack, images uploaded via the admin panel are stored in the server's `uploads/` folder. On free hosting tiers (like Render Free), these files may be deleted when the server restarts. For production MERN apps, it is recommended to update the backend to upload images to Cloudinary or AWS S3.*
+1.  Go to [GitHub.com](https://github.com) and create a new repository called `portfolio`.
+2.  Open your project folder in your terminal/command prompt.
+3.  Run these commands:
+    ```bash
+    git init
+    git add .
+    git commit -m "Initial portfolio commit"
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USERNAME/portfolio.git
+    git push -u origin main
+    ```
+
+---
+
+## Step 3: Deploy to Vercel
+
+1.  Go to [Vercel.com](https://vercel.com) and sign up with GitHub.
+2.  Click **"Add New..."** -> **"Project"**.
+3.  Select your `portfolio` repository and click **Import**.
+4.  **Configure Project:**
+    *   **Framework Preset:** It should auto-detect "Vite".
+    *   **Root Directory:** `./` (Leave as default).
+5.  **Environment Variables (Crucial Step):**
+    Click to expand "Environment Variables". Add the keys you copied from Supabase:
+    
+    | Name | Value |
+    | :--- | :--- |
+    | `VITE_SUPABASE_URL` | *(Paste your Project URL)* |
+    | `VITE_SUPABASE_ANON_KEY` | *(Paste your anon public Key)* |
+
+6.  Click **Deploy**.
+
+---
+
+## Step 4: Final Setup
+
+1.  Once Vercel finishes, click the domain link (e.g., `portfolio.vercel.app`).
+2.  Scroll to the bottom footer.
+3.  **Click the copyright text "© 2024 Immanuel Gondwe" 5 times rapidly.**
+4.  Click the **"Admin Dashboard"** button that appears.
+5.  **Log In:**
+    *   Since you haven't set up email auth in Supabase yet, the default won't work perfectly.
+    *   **Recommended:** Go back to Supabase Dashboard -> **Authentication** -> **Users**.
+    *   Click **"Add User"** and create an admin email/password.
+    *   Use those credentials to log in to your Portfolio Admin.
+
+## 🎉 Done!
+Your site is now live. Any change you make in the Admin panel (text, images) will be saved to Supabase instantly and will be visible to everyone globally.

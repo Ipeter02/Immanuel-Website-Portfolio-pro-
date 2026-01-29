@@ -12,12 +12,12 @@ const Footer: React.FC = () => {
 
   const handleInteractionStart = (type: 'click' | 'touch') => {
       if (type === 'click') {
-          // Desktop: 20 clicks to reveal
+          // Desktop: 5 clicks to reveal (Reduced from 20 for usability)
           if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
           
           clickCountRef.current += 1;
           
-          if (clickCountRef.current >= 20) {
+          if (clickCountRef.current >= 5) {
               setIsAdminVisible(true);
               clickCountRef.current = 0;
           } else {
@@ -27,14 +27,14 @@ const Footer: React.FC = () => {
               }, 1000); 
           }
       } else {
-          // Mobile: Hold for 20 seconds to reveal
+          // Mobile: Hold for 5 seconds to reveal
           // Clear any existing timer first
           if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
           
           longPressTimerRef.current = setTimeout(() => {
               setIsAdminVisible(true);
               if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          }, 20000); // 20 seconds
+          }, 5000); 
       }
   };
 

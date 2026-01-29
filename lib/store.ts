@@ -125,7 +125,7 @@ const defaultProjects: Project[] = [
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1555099962-4199c345e5dd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
     ],
-    techStack: ["NestJS", "Docker", "Redis", "Swagger"],
+    techStack: ["Next.js", "Docker", "Redis", "Swagger"],
     liveLink: "#",
     repoLink: "#",
     challenges: "Optimizing database queries for complex filtering.",
@@ -142,8 +142,7 @@ const defaultSettings: AppSettings = {
   social: {
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
-    youtube: 'https://youtube.com',
-    twitter: 'https://twitter.com'
+    youtube: 'https://youtube.com'
   },
   contactHeading: "Let's work together!",
   contactDescription: "I am currently available for freelance projects and full-time opportunities. Whether you have a question or just want to say hi, I'll try my best to get back to you!"
@@ -162,6 +161,7 @@ const initialData: AppData = {
 // --- GLOBAL STATE SINGLETON ---
 let globalData: AppData = initialData;
 let globalIsLoaded = false;
+let globalConnectionStatus: 'local' | 'custom-server' | 'supabase' | 'offline' = 'local';
 let listeners: (() => void)[] = [];
 
 // Helper to notify all components to re-render
@@ -179,39 +179,37 @@ const setGlobalIsLoaded = (loaded: boolean) => {
 
 // --- INITIALIZATION LOGIC ---
 const initializeData = async () => {
-    // 1. Attempt to load from localStorage immediately
+    // 1. Attempt to load from localStorage immediately for speed/offline support
     try {
         const localData = localStorage.getItem('portfolio_data');
         if (localData) {
             const parsed = JSON.parse(localData);
-            setGlobalData(parsed);
-            setGlobalIsLoaded(true); 
+            // Ensure schema compatibility if we added new fields
+            const merged = { ...initialData, ...parsed, settings: { ...initialData.settings, ...parsed.settings } };
+            setGlobalData(merged);
         }
     } catch(e) {
         console.warn("Local storage error:", e);
     }
 
-    // Safety timeout to prevent white screen if DB hangs
-    setTimeout(() => {
-        if (!globalIsLoaded) setGlobalIsLoaded(true);
-    }, 1500);
-
-    // If no external backend configured, we are done
-    if (!USE_CUSTOM_SERVER && !supabase) {
-        setGlobalIsLoaded(true);
-        return;
-    }
-
-    // 2. Background fetch to update data
+    // 2. Fetch Data from Backend (Overrides local storage if newer)
     try {
         if (USE_CUSTOM_SERVER) {
-            const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
-            if (res.ok) {
-                const jsonData = await res.json();
-                setGlobalData(jsonData);
+            // Option A: Custom Node Backend
+            try {
+                const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
+                if (res.ok) {
+                    const jsonData = await res.json();
+                    setGlobalData(jsonData);
+                    localStorage.setItem('portfolio_data', JSON.stringify(jsonData));
+                    globalConnectionStatus = 'custom-server';
+                }
+            } catch (err) {
+                console.warn("Custom server unreachable:", err);
+                globalConnectionStatus = 'offline';
             }
         } else if (supabase) {
-            // Check if table exists and get data
+            // Option B: Supabase (Priority)
             const { data: dbData, error } = await supabase
                 .from('portfolio_data')
                 .select('content')
@@ -219,16 +217,27 @@ const initializeData = async () => {
                 .single();
 
             if (!error && dbData && dbData.content) {
+                // We found data in the cloud, let's use it!
                 setGlobalData(dbData.content);
                 localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
+                globalConnectionStatus = 'supabase';
             } else if (error) {
-                console.warn("Supabase fetch error (running offline):", error.message);
+                console.warn("Supabase fetch error (likely first run or offline):", error.message);
+                // If it's a "Row not found" error, it means the DB is empty.
+                // We will stick with local data (or defaults) and mark status as Supabase
+                // so the first Save writes to it.
+                if (error.code === 'PGRST116') {
+                    globalConnectionStatus = 'supabase'; 
+                } else {
+                    globalConnectionStatus = 'offline';
+                }
             }
         }
     } catch (e) {
         console.error("Background fetch failed", e);
     } finally {
         setGlobalIsLoaded(true);
+        notify(); // Notify components about status change
     }
 };
 
@@ -244,10 +253,11 @@ export const useStore = () => {
     listeners.push(listener);
     
     // Check safety
-    if (!globalIsLoaded && globalData) {
+    if (!globalIsLoaded) {
+         // Force a check if it hangs
          const t = setTimeout(() => {
              if (!globalIsLoaded) setGlobalIsLoaded(true);
-         }, 500);
+         }, 1000);
          return () => { clearTimeout(t); listeners = listeners.filter(l => l !== listener); }
     }
 
@@ -256,11 +266,14 @@ export const useStore = () => {
     };
   }, []);
 
+  // Generic Save Function (Full Overwrite)
   const saveData = async (newData: AppData) => {
     try {
+      // 1. Update State & LocalStorage
       setGlobalData(newData);
       localStorage.setItem('portfolio_data', JSON.stringify(newData));
 
+      // 2. Persist to Backend
       if (USE_CUSTOM_SERVER) {
           await fetch(`${CUSTOM_API_URL}/portfolio`, {
               method: 'POST',
@@ -274,7 +287,7 @@ export const useStore = () => {
             .upsert({ id: 1, content: newData });
         if (error) {
             console.error("Supabase Save Error:", error.message);
-            alert("Saved locally, but failed to save to Cloud. Check your internet or Supabase keys.");
+            alert("Error saving to cloud: " + error.message);
         }
       } 
     } catch (e) {
@@ -282,7 +295,87 @@ export const useStore = () => {
     }
   };
 
-  // Helper functions
+  // --- Actions ---
+
+  // Upload File Logic
+  const uploadFile = async (file: File): Promise<string> => {
+      if (supabase) {
+          // Sanitize filename
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `images/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('portfolio-assets')
+            .upload(filePath, file);
+
+          if (uploadError) {
+              console.error("Supabase Upload Error:", uploadError);
+              throw uploadError;
+          }
+
+          const { data } = supabase.storage
+            .from('portfolio-assets')
+            .getPublicUrl(filePath);
+
+          return data.publicUrl;
+      } else if (globalConnectionStatus === 'custom-server') {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch(`${CUSTOM_API_URL}/upload`, {
+              method: 'POST',
+              body: formData
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          const data = await res.json();
+          return data.url;
+      } else {
+          // Offline/Local: Convert to Base64 (Not permanent!)
+          return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+          });
+      }
+  };
+
+  // Special Action: Add Message (Prevents race conditions by using specific endpoint if available)
+  const addMessage = async (msg: Omit<Message, 'id' | 'date' | 'read'>) => {
+    const newMessage = { ...msg, id: Math.random().toString(36).substr(2, 9), date: new Date().toISOString(), read: false };
+    
+    // 1. Optimistic UI Update
+    const newMessages = [newMessage, ...globalData.messages];
+    const newData = { ...globalData, messages: newMessages };
+    setGlobalData(newData);
+    localStorage.setItem('portfolio_data', JSON.stringify(newData));
+
+    try {
+        if (USE_CUSTOM_SERVER) {
+             // Use dedicated endpoint to append message safely
+             await fetch(`${CUSTOM_API_URL}/contact`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify(newMessage)
+             });
+        } else if (supabase) {
+             // Fetch current state first to avoid overwriting other updates
+             const { data: current } = await supabase.from('portfolio_data').select('content').eq('id', 1).single();
+             if (current && current.content) {
+                 const remoteMessages = current.content.messages || [];
+                 const updatedContent = { ...current.content, messages: [newMessage, ...remoteMessages] };
+                 await supabase.from('portfolio_data').upsert({ id: 1, content: updatedContent });
+             } else {
+                 // First message ever
+                 await supabase.from('portfolio_data').upsert({ id: 1, content: newData });
+             }
+        }
+    } catch (e) {
+        console.error("Failed to send message to backend", e);
+    }
+    return true;
+  };
+
   const updateHero = (hero: HeroData) => saveData({ ...globalData, hero });
   const updateAbout = (about: AboutData) => saveData({ ...globalData, about });
   const addProject = (project: Project) => saveData({ ...globalData, projects: [{ ...project, id: Date.now() }, ...globalData.projects] });
@@ -292,18 +385,18 @@ export const useStore = () => {
   const addService = (service: Service) => saveData({ ...globalData, services: [...globalData.services, { ...service, id: Math.random().toString(36).substr(2, 9) }] });
   const updateService = (service: Service) => saveData({ ...globalData, services: globalData.services.map(s => s.id === service.id ? service : s) });
   const deleteService = (id: string) => saveData({ ...globalData, services: globalData.services.filter(s => s.id !== id) });
-  const addMessage = (msg: Omit<Message, 'id' | 'date' | 'read'>) => {
-    saveData({ ...globalData, messages: [{ ...msg, id: Math.random().toString(36).substr(2, 9), date: new Date().toISOString(), read: false }, ...globalData.messages] });
-    return true;
-  };
+  
   const markMessageRead = (id: string) => saveData({ ...globalData, messages: globalData.messages.map(m => m.id === id ? { ...m, read: true } : m) });
   const deleteMessage = (id: string) => saveData({ ...globalData, messages: globalData.messages.filter(m => m.id !== id) });
+  
   const updateSettings = (settings: AppSettings) => saveData({ ...globalData, settings });
   const resetData = () => { if (window.confirm("Reset all data?")) saveData(initialData); };
 
   return {
     data: globalData,
     isLoaded: globalIsLoaded,
+    connectionStatus: globalConnectionStatus,
+    uploadFile,
     updateHero, updateAbout, addProject, updateProject, deleteProject, updateSkills,
     addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage,
     updateSettings, resetData
