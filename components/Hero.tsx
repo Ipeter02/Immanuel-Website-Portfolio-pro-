@@ -102,7 +102,7 @@ const Hero: React.FC = () => {
                 alt="Hero Background"
             />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-cream/90 dark:bg-slate-950/75 transition-colors duration-500 z-10"></div>
+        <div className="absolute inset-0 bg-cream/70 dark:bg-slate-950/60 transition-colors duration-500 z-10"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-cream dark:to-slate-950 z-10"></div>
       </div>
 
