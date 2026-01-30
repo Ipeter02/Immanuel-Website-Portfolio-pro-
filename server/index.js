@@ -14,7 +14,8 @@ const UPLOAD_DIR = path.join(__dirname, 'uploads');
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '100mb' })); // Increased to 100mb
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 // Ensure upload dir exists
@@ -58,7 +59,10 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+});
 
 // --- Helper Functions (File System Fallback) ---
 const readDbFile = () => {

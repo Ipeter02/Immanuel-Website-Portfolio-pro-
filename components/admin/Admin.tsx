@@ -17,7 +17,7 @@ import {
   Scissors, Send, ShoppingBag, ShoppingCart, Sliders, Speaker, Star, Sun, Table, Tag,
   Thermometer, ThumbsUp, ToggleLeft, Wrench, Truck, Tv, Umbrella, Unlock, UserCheck,
   UserPlus, Users, Video, Voicemail, Volume, Volume2, Watch, Youtube, TrendingUp, BarChart, DollarSign, Target,
-  Bookmark
+  Bookmark, FileText as FileTextIcon
 } from 'lucide-react';
 import Button from '../ui/Button';
 import { Project, Service, SkillCategory } from '../../types';
@@ -609,6 +609,33 @@ const HeroEditor: React.FC = () => {
         }
     };
 
+    const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        if (localData.backgroundImages.length >= 10) {
+            alert("Maximum 10 background images allowed.");
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const url = await uploadFile(file);
+            setLocalData({ ...localData, backgroundImages: [...localData.backgroundImages, url] });
+        } catch (e) {
+            console.error(e);
+            alert("Upload failed");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removeBgImage = (index: number) => {
+        const newImages = [...localData.backgroundImages];
+        newImages.splice(index, 1);
+        setLocalData({ ...localData, backgroundImages: newImages });
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex justify-between items-center">
@@ -650,12 +677,39 @@ const HeroEditor: React.FC = () => {
                         </div>
                      </div>
                  </div>
+                 
+                 <div className="pt-6 border-t border-slate-100">
+                     <label className="block text-sm font-bold text-slate-700 mb-4">Background Images (Max 10)</label>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                         {localData.backgroundImages.map((img, idx) => (
+                             <div key={idx} className="relative group aspect-video rounded-lg overflow-hidden border border-slate-200">
+                                 <img src={img} alt={`BG ${idx}`} className="w-full h-full object-cover" />
+                                 <button 
+                                     onClick={() => removeBgImage(idx)}
+                                     className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                     title="Remove Image"
+                                 >
+                                     <X size={12} />
+                                 </button>
+                             </div>
+                         ))}
+                         {localData.backgroundImages.length < 10 && (
+                             <label className="aspect-video flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                                 {uploading ? <Loader2 className="animate-spin text-primary" /> : <Plus className="text-slate-400" />}
+                                 <span className="text-[10px] text-slate-500 mt-1">Add Image</span>
+                                 <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} disabled={uploading} />
+                             </label>
+                         )}
+                     </div>
+                     <p className="text-xs text-slate-400">These images will rotate automatically in the hero background.</p>
+                 </div>
             </div>
         </div>
     );
 };
 
 const AboutEditor: React.FC = () => {
+    // ... (No major changes requested here, keeping existing logic)
     const { data, updateAbout, uploadFile } = useStore();
     const [localData, setLocalData] = useState(data.about);
     const [uploading, setUploading] = useState(false);
@@ -739,6 +793,7 @@ const AboutEditor: React.FC = () => {
 
 // --- Icon Picker Component ---
 const IconPicker: React.FC<{ value: string; onChange: (val: string) => void; showLabel?: boolean }> = ({ value, onChange, showLabel = false }) => {
+    // ... (Keeping existing implementation)
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -835,7 +890,9 @@ const SkillsEditor: React.FC = () => {
     const { data, updateSkills } = useStore();
     const [localSkills, setLocalSkills] = useState(data.skills);
     
-    // Track which category is pending deletion confirmation
+    // Controlled inputs for each category's quick add field
+    const [quickAddInputs, setQuickAddInputs] = useState<{[key: number]: string}>({});
+    
     const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
     
     // Modal State
@@ -857,11 +914,20 @@ const SkillsEditor: React.FC = () => {
         setLocalSkills(newSkills);
     };
     
-    const handleAddSkillName = (catIdx: number, name: string) => {
-        if (!name.trim()) return;
+    const handleQuickInputChange = (idx: number, val: string) => {
+        setQuickAddInputs({ ...quickAddInputs, [idx]: val });
+    };
+
+    const handleAddSkillName = (catIdx: number) => {
+        const name = quickAddInputs[catIdx];
+        if (!name || !name.trim()) return;
+        
         const newSkills = [...localSkills];
         newSkills[catIdx].skills.push({ name: name.trim() });
         setLocalSkills(newSkills);
+        
+        // Clear input
+        setQuickAddInputs({ ...quickAddInputs, [catIdx]: '' });
     };
 
     // Open Modal logic
@@ -986,28 +1052,34 @@ const SkillsEditor: React.FC = () => {
                              )}
                         </div>
 
-                        {/* Quick Add Skill Input */}
+                        {/* Quick Add Skill Input - Controlled & Clickable */}
                         <div className="mt-auto pt-3 border-t border-slate-50">
                             <div className="flex items-center gap-2">
                                 <input 
                                     type="text"
                                     placeholder="Add skill..."
+                                    value={quickAddInputs[catIdx] || ''}
+                                    onChange={(e) => handleQuickInputChange(catIdx, e.target.value)}
                                     className="flex-1 text-sm p-2 bg-transparent border-none focus:ring-0 placeholder-slate-400"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
-                                            handleAddSkillName(catIdx, e.currentTarget.value);
-                                            e.currentTarget.value = '';
+                                            handleAddSkillName(catIdx);
                                         }
                                     }}
                                 />
-                                <div className="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">Enter</div>
+                                <button 
+                                    onClick={() => handleAddSkillName(catIdx)}
+                                    className="text-[10px] text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded border border-slate-200 font-bold uppercase transition-colors"
+                                >
+                                    Enter
+                                </button>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Add Category Modal */}
+            {/* Add Category Modal (Same as before) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
@@ -1091,6 +1163,7 @@ const SkillsEditor: React.FC = () => {
 };
 
 const ServicesEditor: React.FC = () => {
+    // ... (Keeping existing implementation)
     const { data, addService, updateService, deleteService } = useStore();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Service | null>(null);
@@ -1202,6 +1275,12 @@ const ProjectsEditor: React.FC = () => {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !editForm) return;
+        
+        if (editForm.images.length >= 50) {
+            alert("Maximum 50 images allowed.");
+            return;
+        }
+
         setUploading(true);
         try {
             const url = await uploadFile(file);
@@ -1255,24 +1334,32 @@ const ProjectsEditor: React.FC = () => {
                     <h3 className="text-lg font-bold mb-6">{editingId === 0 ? 'Create Project' : 'Edit Project'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
-                            <input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} placeholder="Project Title" className="w-full p-3 border rounded-lg" />
-                            <input value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})} placeholder="Role (e.g. Backend)" className="w-full p-3 border rounded-lg" />
+                            <input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} placeholder="Project Title (e.g. Graphic Design Portfolio)" className="w-full p-3 border rounded-lg" />
+                            <input value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})} placeholder="Role / Category (e.g. Design, Research)" className="w-full p-3 border rounded-lg" />
                             <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} placeholder="Short Summary" className="w-full p-3 border rounded-lg" rows={3} />
-                             <input value={editForm.liveLink || ''} onChange={e => setEditForm({...editForm, liveLink: e.target.value})} placeholder="Live Demo URL" className="w-full p-3 border rounded-lg" />
-                             <input value={editForm.repoLink || ''} onChange={e => setEditForm({...editForm, repoLink: e.target.value})} placeholder="GitHub Repo URL" className="w-full p-3 border rounded-lg" />
+                             
+                             <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Project Link (Live / General URL)</label>
+                                <input value={editForm.liveLink || ''} onChange={e => setEditForm({...editForm, liveLink: e.target.value})} placeholder="https://..." className="w-full p-3 border rounded-lg" />
+                             </div>
+                             
+                             <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Secondary Link (Repo / Docs)</label>
+                                <input value={editForm.repoLink || ''} onChange={e => setEditForm({...editForm, repoLink: e.target.value})} placeholder="https://..." className="w-full p-3 border rounded-lg" />
+                             </div>
                         </div>
                         <div className="space-y-4">
                             <textarea value={editForm.longDescription} onChange={e => setEditForm({...editForm, longDescription: e.target.value})} placeholder="Detailed Description" className="w-full p-3 border rounded-lg" rows={6} />
-                            <textarea value={editForm.challenges} onChange={e => setEditForm({...editForm, challenges: e.target.value})} placeholder="Key Challenge" className="w-full p-3 border rounded-lg" rows={2} />
+                            <textarea value={editForm.challenges} onChange={e => setEditForm({...editForm, challenges: e.target.value})} placeholder="Key Challenge / Insight" className="w-full p-3 border rounded-lg" rows={2} />
                             
                             {/* Tech Stack - Simple Comma Separated for now */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 mb-1">Tech Stack (Comma Separated)</label>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Tech Stack / Tools (Comma Separated)</label>
                                 <input 
                                     value={editForm.techStack.join(', ')} 
                                     onChange={e => setEditForm({...editForm, techStack: e.target.value.split(',').map(s => s.trim())})} 
                                     className="w-full p-3 border rounded-lg" 
-                                    placeholder="React, Node.js, ..." 
+                                    placeholder="React, Photoshop, Figma, ..." 
                                 />
                             </div>
                         </div>
@@ -1280,11 +1367,11 @@ const ProjectsEditor: React.FC = () => {
                     
                     {/* Image Management */}
                     <div className="mt-6 pt-6 border-t border-slate-100">
-                        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><ImageIcon size={18}/> Project Images</h4>
+                        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><ImageIcon size={18}/> Project Images (Max 50)</h4>
                         
-                        <div className="flex flex-wrap gap-4 mb-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
                             {editForm.images.map((img, idx) => (
-                                <div key={idx} className="relative w-24 h-24 group rounded-lg overflow-hidden border border-slate-200">
+                                <div key={idx} className="relative aspect-square group rounded-lg overflow-hidden border border-slate-200">
                                     <img src={img} alt="Preview" className="w-full h-full object-cover" />
                                     <button 
                                         onClick={() => removeImage(idx)}
@@ -1294,7 +1381,7 @@ const ProjectsEditor: React.FC = () => {
                                     </button>
                                 </div>
                             ))}
-                            <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                            <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
                                 {uploading ? <Loader2 className="animate-spin text-primary" /> : <Plus className="text-slate-400" />}
                                 <span className="text-[10px] text-slate-500 mt-1">Upload</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
@@ -1325,7 +1412,7 @@ const ProjectsEditor: React.FC = () => {
                     {data.projects.map(project => (
                         <div key={project.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
                             <div className="h-40 bg-slate-100 relative">
-                                <img src={project.images[0]} alt={project.title} className="w-full h-full object-cover" />
+                                <img src={project.images[0] || "https://via.placeholder.com/400x300?text=No+Image"} alt={project.title} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                     <button onClick={() => handleEdit(project)} className="p-2 bg-white rounded-full text-slate-800 hover:text-primary"><PenTool size={18} /></button>
                                     <button onClick={() => deleteProject(project.id)} className="p-2 bg-white rounded-full text-slate-800 hover:text-red-500"><Trash2 size={18} /></button>
@@ -1409,6 +1496,29 @@ const SettingsEditor: React.FC = () => {
         } catch (e) {
             console.error(e);
             alert("Upload failed");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check file type (PDF)
+        if (file.type !== 'application/pdf') {
+            alert("Please upload a PDF file.");
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const url = await uploadFile(file);
+            setLocal({ ...local, resumeUrl: url });
+            alert("Resume uploaded successfully!");
+        } catch (e) {
+            console.error(e);
+            alert("Resume upload failed.");
         } finally {
             setUploading(false);
         }
@@ -1513,6 +1623,27 @@ const SettingsEditor: React.FC = () => {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Location</label>
                     <input name="location" value={local.location} onChange={handleChange} className="w-full p-3 border rounded-lg" />
                 </div>
+
+                 <div className="pt-4 border-t border-slate-100">
+                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><FileTextIcon size={18}/> Resume / CV</h3>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            {local.resumeUrl ? (
+                                <a href={local.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm font-bold flex items-center gap-2">
+                                    <FileTextIcon size={16} /> View Current Resume
+                                </a>
+                            ) : (
+                                <span className="text-slate-400 text-sm italic">No resume uploaded.</span>
+                            )}
+                        </div>
+                        <label className="inline-flex items-center gap-2 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-fit">
+                             {uploading ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16}/>} 
+                             <span>Upload PDF Resume (Max 100MB)</span>
+                             <input type="file" accept="application/pdf" className="hidden" onChange={handleResumeUpload} disabled={uploading} />
+                        </label>
+                    </div>
+                 </div>
+
                  <div className="pt-4 border-t border-slate-100">
                     <h3 className="font-bold text-slate-800 mb-4">Social Links</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

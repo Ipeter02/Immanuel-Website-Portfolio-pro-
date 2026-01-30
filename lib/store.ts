@@ -201,7 +201,11 @@ const initializeData = async () => {
                 if (res.ok) {
                     const jsonData = await res.json();
                     setGlobalData(jsonData);
-                    localStorage.setItem('portfolio_data', JSON.stringify(jsonData));
+                    try {
+                        localStorage.setItem('portfolio_data', JSON.stringify(jsonData));
+                    } catch (e) {
+                         console.warn("Initial data too large for localStorage.");
+                    }
                     globalConnectionStatus = 'custom-server';
                 }
             } catch (err) {
@@ -219,7 +223,11 @@ const initializeData = async () => {
             if (!error && dbData && dbData.content) {
                 // We found data in the cloud, let's use it!
                 setGlobalData(dbData.content);
-                localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
+                try {
+                    localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
+                } catch (e) {
+                     console.warn("Initial data too large for localStorage.");
+                }
                 globalConnectionStatus = 'supabase';
             } else if (error) {
                 console.warn("Supabase fetch error (likely first run or offline):", error.message);
@@ -269,9 +277,24 @@ export const useStore = () => {
   // Generic Save Function (Full Overwrite)
   const saveData = async (newData: AppData) => {
     try {
-      // 1. Update State & LocalStorage
+      // 1. Update State
       setGlobalData(newData);
-      localStorage.setItem('portfolio_data', JSON.stringify(newData));
+      
+      // Attempt to save to LocalStorage, handle quota errors
+      try {
+        localStorage.setItem('portfolio_data', JSON.stringify(newData));
+      } catch (storageError: any) {
+        // Code 22 is often QuotaExceededError
+        if (storageError.name === 'QuotaExceededError' || storageError.code === 22) {
+          console.warn("Local storage quota exceeded. Data will persist in memory and backend, but might not persist locally after refresh if backend is unavailable.");
+          // We can optionally alert the user if we are in 'local' mode (offline)
+          if (globalConnectionStatus === 'local' || globalConnectionStatus === 'offline') {
+              alert("Storage limit reached! Your data (especially large images/files) cannot be saved locally anymore. Please connect to a backend or delete some large items.");
+          }
+        } else {
+          console.error("Local storage error:", storageError);
+        }
+      }
 
       // 2. Persist to Backend
       if (USE_CUSTOM_SERVER) {
@@ -347,12 +370,13 @@ export const useStore = () => {
     // 1. Optimistic UI Update
     const newMessages = [newMessage, ...globalData.messages];
     const newData = { ...globalData, messages: newMessages };
-    setGlobalData(newData);
-    localStorage.setItem('portfolio_data', JSON.stringify(newData));
+    
+    // Use the safe saveData wrapper (or manually handle it to avoid circular dependency, but saveData handles localStorage error)
+    await saveData(newData); 
 
     try {
         if (USE_CUSTOM_SERVER) {
-             // Use dedicated endpoint to append message safely
+             // Use dedicated endpoint to append message safely (Backend handles atomic update)
              await fetch(`${CUSTOM_API_URL}/contact`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
