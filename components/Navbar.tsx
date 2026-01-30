@@ -216,7 +216,11 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
                 </button>
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-full text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50 focus:outline-none transition-colors cursor-pointer active:scale-95"
+                className={`inline-flex items-center justify-center p-2 rounded-full focus:outline-none transition-all duration-300 cursor-pointer active:scale-95 border
+                  ${isOpen 
+                    ? 'text-sky-500 bg-purple-500/10 border-purple-500/30 dark:bg-purple-500/20 dark:border-purple-500/40 shadow-[0_0_15px_rgba(139,92,246,0.15)]' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50 border-transparent'
+                  }`}
                 aria-controls="mobile-menu"
                 aria-expanded={isOpen}
                 aria-label={isOpen ? "Close main menu" : "Open main menu"}
