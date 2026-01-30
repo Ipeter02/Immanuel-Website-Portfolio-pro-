@@ -17,7 +17,8 @@ import {
   Scissors, Send, ShoppingBag, ShoppingCart, Sliders, Speaker, Star, Sun, Table, Tag,
   Thermometer, ThumbsUp, ToggleLeft, Wrench, Truck, Tv, Umbrella, Unlock, UserCheck,
   UserPlus, Users, Video, Voicemail, Volume, Volume2, Watch, Youtube, TrendingUp, BarChart, DollarSign, Target,
-  Bookmark, FileText as FileTextIcon
+  Bookmark, FileText as FileTextIcon,
+  Code2, BookOpen
 } from 'lucide-react';
 import Button from '../ui/Button';
 import { Project, Service, SkillCategory } from '../../types';
@@ -25,7 +26,7 @@ import { Project, Service, SkillCategory } from '../../types';
 // --- Icon Mapping ---
 const ICON_MAP: Record<string, React.ElementType> = {
   // Development
-  Code, Server, Terminal, Database, GitBranch, FileCode, Braces, Command, Hash, FileJson,
+  Code, Code2, Server, Terminal, Database, GitBranch, FileCode, Braces, Command, Hash, FileJson,
   
   // Web & Devices
   Globe, Layout, Smartphone, Monitor, Chrome, Wifi, Bluetooth,
@@ -45,6 +46,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   // General UI
   Home, Search, Menu, List, Grid, Filter, Calendar, Clock, MapPin, Link, ExternalLink,
   Zap, Info, AlertTriangle, Check, X, Trash2, Plus, Edit, Copy, Download, Upload,
+  BookOpen,
   
   // Misc
   Coffee, Gift, Flag, Tag, Bookmark, Anchor, Key, Umbrella, Sun, Moon, Truck, Package
@@ -54,14 +56,14 @@ const AVAILABLE_ICONS = Object.keys(ICON_MAP).sort();
 
 // Categories for the Picker
 const ICON_CATEGORIES: Record<string, string[]> = {
-    "Development": ["Code", "Server", "Terminal", "Database", "GitBranch", "FileCode", "Braces", "Command", "Hash", "FileJson"],
+    "Development": ["Code", "Code2", "Server", "Terminal", "Database", "GitBranch", "FileCode", "Braces", "Command", "Hash", "FileJson"],
     "Design & Creative": ["Palette", "PenTool", "Figma", "Framer", "Image", "Layers", "Camera", "Video", "Music", "Scissors"],
     "Business": ["Briefcase", "TrendingUp", "BarChart", "Target", "DollarSign", "Award", "Users", "CreditCard", "PieChart", "ShoppingBag", "ShoppingCart"],
     "Infrastructure": ["Cloud", "Cpu", "HardDrive", "Shield", "LockKeyhole", "Wrench", "Settings", "Wifi", "Power", "Box"],
     "Web & Devices": ["Globe", "Layout", "Smartphone", "Monitor", "Chrome", "Bluetooth"],
     "Communication": ["MessageSquare", "Mail", "Phone", "Send", "Share2", "Slack", "Trello", "User", "ThumbsUp", "Heart", "Star"],
     "UI Elements": ["Home", "Search", "Menu", "List", "Grid", "Filter", "Calendar", "Clock", "MapPin", "Link", "ExternalLink", "Zap", "Check", "X", "Trash2", "Plus", "Edit", "Copy", "Download", "Upload", "Info", "AlertTriangle"],
-    "Misc": ["Coffee", "Gift", "Flag", "Tag", "Bookmark", "Anchor", "Key", "Umbrella", "Sun", "Moon", "Truck", "Package"]
+    "Misc": ["Coffee", "Gift", "Flag", "Tag", "Bookmark", "Anchor", "Key", "Umbrella", "Sun", "Moon", "Truck", "Package", "BookOpen"]
 };
 
 // --- Auth Component ---
@@ -77,7 +79,6 @@ const Admin: React.FC = () => {
 
   useEffect(() => {
       if (supabase) {
-        // Supabase Auth Mode
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
             setAuthChecking(false);
@@ -89,7 +90,6 @@ const Admin: React.FC = () => {
 
         return () => subscription.unsubscribe();
       } else {
-        // Local/Demo Mode
         const localUser = sessionStorage.getItem('admin_user');
         if (localUser) {
             setUser(JSON.parse(localUser));
@@ -111,7 +111,6 @@ const Admin: React.FC = () => {
             });
             if (error) throw error;
         } else {
-            // Local fallback login
             const storedPassword = localStorage.getItem('admin_local_password') || 'admin';
             if (password === storedPassword) {
                 const fakeUser = { email: email || 'admin@local', id: 'local-admin' };
@@ -244,7 +243,6 @@ const Admin: React.FC = () => {
   return <AdminLayout onLogout={handleLogout} />;
 };
 
-// --- Reusable Save Button ---
 const SaveAction = ({ onSave, label = "Save Changes", className = "" }: { onSave: () => void, label?: string, className?: string }) => {
    const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -276,7 +274,6 @@ const SaveAction = ({ onSave, label = "Save Changes", className = "" }: { onSave
    );
 };
 
-// --- Main Layout ---
 type Tab = 'dashboard' | 'hero' | 'about' | 'skills' | 'services' | 'projects' | 'messages' | 'settings';
 
 const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
@@ -328,29 +325,16 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   ];
 
   const adminImage = data.settings.adminProfileImage || "https://via.placeholder.com/150";
-
-  // Notification Logic
   const unreadMessages = data.messages.filter(m => !m.read);
   const unreadCount = unreadMessages.length;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-100 flex font-sans text-slate-800">
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-[280px] bg-[#1e293b] text-white transition-transform duration-300 z-50 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        {/* Profile Header */}
         <div className="p-8 flex flex-col items-center border-b border-slate-700/50 bg-[#16202e]">
           <div className="relative group cursor-pointer">
-             <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleProfileImageUpload}
-                accept="image/*"
-                className="hidden"
-             />
-             <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary mb-4 relative overflow-hidden"
-             >
+             <input type="file" ref={fileInputRef} onChange={handleProfileImageUpload} accept="image/*" className="hidden" />
+             <div onClick={() => fileInputRef.current?.click()} className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary mb-4 relative overflow-hidden">
                 <img src={adminImage} alt="Admin" className="w-full h-full rounded-full object-cover border-4 border-[#1e293b]" />
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     {isUploading ? <Loader2 className="animate-spin" size={24} /> : <Upload size={24} />}
@@ -358,56 +342,33 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
              </div>
           </div>
           <h3 className="font-bold text-lg">Immanuel Gondwe</h3>
-          
           <div className="mt-2 flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-medium">
-             <div className={`w-2 h-2 rounded-full ${
-                connectionStatus === 'supabase' ? 'bg-green-500' :
-                connectionStatus === 'custom-server' ? 'bg-blue-500' :
-                connectionStatus === 'local' ? 'bg-yellow-500' : 'bg-red-500'
-             }`}></div>
+             <div className={`w-2 h-2 rounded-full ${connectionStatus === 'supabase' ? 'bg-green-500' : connectionStatus === 'custom-server' ? 'bg-blue-500' : connectionStatus === 'local' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
              <span className="uppercase tracking-wide text-[10px] text-slate-300">
-                {connectionStatus === 'supabase' ? 'Supabase' :
-                 connectionStatus === 'custom-server' ? 'Custom API' :
-                 connectionStatus === 'local' ? 'Local Storage' : 'Offline'}
+                {connectionStatus === 'supabase' ? 'Supabase' : connectionStatus === 'custom-server' ? 'Custom API' : connectionStatus === 'local' ? 'Local Storage' : 'Offline'}
              </span>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto custom-scrollbar">
            <div className="mb-6 px-2 flex flex-col gap-2">
-                <button 
-                    onClick={() => navigate('/')}
-                    className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 p-3 rounded-xl text-sm font-medium transition-all"
-                >
+                <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 p-3 rounded-xl text-sm font-medium transition-all">
                     <ArrowLeft size={16} /> Back to Website
                 </button>
-                <button 
-                    onClick={handleViewLive}
-                    className="w-full flex items-center justify-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 p-3 rounded-xl text-sm font-bold transition-all group"
-                >
+                <button onClick={handleViewLive} className="w-full flex items-center justify-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 p-3 rounded-xl text-sm font-bold transition-all group">
                     View Live Website <ExternalLink size={16} className="group-hover:translate-x-1 transition-transform" />
                 </button>
            </div>
            
            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-4 mt-2">Menu</div>
            {menuItems.map(item => (
-             <button
-               key={item.id}
-               onClick={() => { setActiveTab(item.id as Tab); setSidebarOpen(false); }}
-               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                 activeTab === item.id 
-                 ? 'bg-slate-700/50 text-white border-l-4 border-primary' 
-                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-               }`}
-             >
+             <button key={item.id} onClick={() => { setActiveTab(item.id as Tab); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === item.id ? 'bg-slate-700/50 text-white border-l-4 border-primary' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
                <item.icon size={20} className={activeTab === item.id ? 'text-primary' : 'opacity-70'} />
                {item.label}
              </button>
            ))}
         </nav>
 
-        {/* Logout */}
         <div className="p-4 border-t border-slate-700/50">
            <button onClick={onLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
               <LogOut size={20} /> Logout
@@ -415,9 +376,7 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 lg:ml-[280px] flex flex-col h-screen">
-         {/* Top Header */}
          <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
             <div className="flex items-center gap-4">
                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-slate-100 rounded-lg"><Menu /></button>
@@ -428,16 +387,10 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             
             <div className="flex items-center gap-6">
                <div className="relative">
-                  <button 
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    className="relative p-2 hover:bg-slate-100 rounded-full transition-colors focus:outline-none"
-                  >
+                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 hover:bg-slate-100 rounded-full transition-colors focus:outline-none">
                      <Bell size={20} className={`text-slate-500 ${showNotifications ? 'text-primary' : ''}`} />
-                     {unreadCount > 0 && (
-                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-                     )}
+                     {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}
                   </button>
-
                   {showNotifications && (
                     <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -447,16 +400,11 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         <div className="max-h-64 overflow-y-auto">
                             {unreadCount === 0 ? (
                                 <div className="p-8 text-center text-slate-400 text-sm">
-                                    <Bell className="mx-auto mb-2 opacity-50" size={24} />
-                                    No new notifications
+                                    <Bell className="mx-auto mb-2 opacity-50" size={24} /> No new notifications
                                 </div>
                             ) : (
                                 unreadMessages.slice(0, 5).map(m => (
-                                    <div 
-                                        key={m.id} 
-                                        onClick={() => { setActiveTab('messages'); setShowNotifications(false); }}
-                                        className="p-4 border-b border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors"
-                                    >
+                                    <div key={m.id} onClick={() => { setActiveTab('messages'); setShowNotifications(false); }} className="p-4 border-b border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors">
                                         <div className="flex justify-between mb-1">
                                             <span className="font-bold text-xs text-slate-700">{m.name}</span>
                                             <span className="text-[10px] text-slate-400">{new Date(m.date).toLocaleDateString()}</span>
@@ -467,23 +415,13 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                             )}
                         </div>
                         <div className="p-2 border-t border-slate-100 bg-slate-50">
-                            <button 
-                                onClick={() => { setActiveTab('messages'); setShowNotifications(false); }}
-                                className="w-full py-2 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
-                            >
-                                View All Messages
-                            </button>
+                            <button onClick={() => { setActiveTab('messages'); setShowNotifications(false); }} className="w-full py-2 text-xs font-bold text-primary hover:text-primary/80 transition-colors">View All Messages</button>
                         </div>
                     </div>
                   )}
-                  {showNotifications && (
-                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
-                  )}
+                  {showNotifications && <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>}
                </div>
-
-               <button onClick={() => setActiveTab('settings')}>
-                 <Settings size={20} className="text-slate-500 hover:text-primary transition-colors cursor-pointer" />
-               </button>
+               <button onClick={() => setActiveTab('settings')}><Settings size={20} className="text-slate-500 hover:text-primary transition-colors cursor-pointer" /></button>
                <img src={adminImage} alt="Profile" className="w-9 h-9 rounded-full object-cover border border-slate-200 cursor-pointer" />
             </div>
          </header>
@@ -709,10 +647,22 @@ const HeroEditor: React.FC = () => {
 };
 
 const AboutEditor: React.FC = () => {
-    // ... (No major changes requested here, keeping existing logic)
     const { data, updateAbout, uploadFile } = useStore();
     const [localData, setLocalData] = useState(data.about);
     const [uploading, setUploading] = useState(false);
+
+    // Initialize cards if they don't exist (e.g. from older data)
+    useEffect(() => {
+        if (!localData.cards) {
+            setLocalData(prev => ({
+                ...prev,
+                cards: [
+                    { title: "Development", description: "Clean code, modern patterns, and scalable architecture.", iconName: "Code2" },
+                    { title: "Learning", description: "Constantly upskilling in System Design and Cloud Tech.", iconName: "BookOpen" }
+                ]
+            }));
+        }
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (e.target.name.startsWith('stats.')) {
@@ -720,6 +670,14 @@ const AboutEditor: React.FC = () => {
             setLocalData({ ...localData, stats: { ...localData.stats, [statKey]: e.target.value } });
         } else {
             setLocalData({ ...localData, [e.target.name]: e.target.value });
+        }
+    };
+
+    const handleCardChange = (idx: number, field: string, val: string) => {
+        const newCards = [...(localData.cards || [])];
+        if (newCards[idx]) {
+            (newCards[idx] as any)[field] = val;
+            setLocalData({ ...localData, cards: newCards });
         }
     };
 
@@ -757,8 +715,43 @@ const AboutEditor: React.FC = () => {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Bio Paragraph 2</label>
                     <textarea name="bio2" value={localData.bio2} onChange={handleChange} rows={4} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" />
                  </div>
+
+                 {/* Info Cards Editor */}
+                 <div className="pt-6 border-t border-slate-100">
+                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Layout size={18} /> Info Cards</h3>
+                     <p className="text-sm text-slate-500 mb-4">Edit the two highlight cards displayed in the About section.</p>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {localData.cards?.map((card, idx) => (
+                            <div key={idx} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                                <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                                    <span className="text-xs font-bold text-primary uppercase tracking-wider">Card {idx + 1}</span>
+                                    <IconPicker value={card.iconName} onChange={(val) => handleCardChange(idx, 'iconName', val)} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Title</label>
+                                    <input 
+                                        value={card.title}
+                                        onChange={(e) => handleCardChange(idx, 'title', e.target.value)}
+                                        placeholder="Card Title"
+                                        className="w-full p-2.5 rounded-lg border border-slate-200 text-sm font-bold focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Description</label>
+                                    <textarea 
+                                        value={card.description}
+                                        onChange={(e) => handleCardChange(idx, 'description', e.target.value)}
+                                        placeholder="Description"
+                                        rows={3}
+                                        className="w-full p-2.5 rounded-lg border border-slate-200 text-sm focus:border-primary outline-none"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                 </div>
                  
-                 <div>
+                 <div className="pt-4 border-t border-slate-100">
                     <label className="block text-sm font-bold text-slate-700 mb-2">About Image</label>
                     <div className="flex gap-4 items-center">
                         <img src={localData.imageUrl} alt="About" className="w-20 h-20 object-cover rounded-lg border" />
@@ -886,6 +879,7 @@ const IconPicker: React.FC<{ value: string; onChange: (val: string) => void; sho
     );
 };
 
+// ... (Rest of components: SkillsEditor, ServicesEditor, ProjectsEditor, MessagesViewer, SettingsEditor, export default Admin)
 const SkillsEditor: React.FC = () => {
     const { data, updateSkills } = useStore();
     const [localSkills, setLocalSkills] = useState(data.skills);

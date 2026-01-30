@@ -28,7 +28,19 @@ const defaultAbout: AboutData = {
     projectsCompleted: "10+",
     deliverySpeed: "Fast"
   },
-  imageUrl: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+  imageUrl: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+  cards: [
+    { 
+        title: "Development", 
+        description: "Clean code, modern patterns, and scalable architecture.", 
+        iconName: "Code2" 
+    },
+    { 
+        title: "Learning", 
+        description: "Constantly upskilling in System Design and Cloud Tech.", 
+        iconName: "BookOpen" 
+    }
+  ]
 };
 
 const defaultSkills: SkillCategory[] = [
@@ -184,8 +196,13 @@ const initializeData = async () => {
         const localData = localStorage.getItem('portfolio_data');
         if (localData) {
             const parsed = JSON.parse(localData);
-            // Ensure schema compatibility if we added new fields
-            const merged = { ...initialData, ...parsed, settings: { ...initialData.settings, ...parsed.settings } };
+            // Deep merge vital sections to ensure new fields (like about.cards) exist if they are missing in local storage
+            const merged = { 
+                ...initialData, 
+                ...parsed, 
+                about: { ...initialData.about, ...parsed.about }, // Merge about so new fields aren't lost
+                settings: { ...initialData.settings, ...parsed.settings } 
+            };
             setGlobalData(merged);
         }
     } catch(e) {
@@ -222,9 +239,17 @@ const initializeData = async () => {
 
             if (!error && dbData && dbData.content) {
                 // We found data in the cloud, let's use it!
-                setGlobalData(dbData.content);
+                // Ensure schema compatibility
+                const merged = { 
+                    ...initialData, 
+                    ...dbData.content, 
+                    about: { ...initialData.about, ...dbData.content.about },
+                    settings: { ...initialData.settings, ...dbData.content.settings } 
+                };
+                
+                setGlobalData(merged);
                 try {
-                    localStorage.setItem('portfolio_data', JSON.stringify(dbData.content));
+                    localStorage.setItem('portfolio_data', JSON.stringify(merged));
                 } catch (e) {
                      console.warn("Initial data too large for localStorage.");
                 }
@@ -354,6 +379,14 @@ export const useStore = () => {
           return data.url;
       } else {
           // Offline/Local: Convert to Base64 (Not permanent!)
+          
+          // SAFETY CHECK: Prevent crashing browser with large files in local mode
+          if (file.size > 5 * 1024 * 1024) { // 5MB Limit
+              const msg = "⚠️ File too large for Local Mode!\n\nProcessing a large file (like a 100MB resume) inside the browser will freeze your page and cause it to be blocked by Edge/Chrome.\n\nPlease connect to a Backend (Custom Server or Supabase) to upload large files.";
+              alert(msg);
+              throw new Error("File too large for local storage");
+          }
+
           return new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);

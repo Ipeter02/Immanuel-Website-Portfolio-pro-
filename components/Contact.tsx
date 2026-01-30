@@ -184,13 +184,37 @@ const Contact: React.FC = () => {
            <p className="text-sm font-medium text-slate-500 mb-4 uppercase tracking-wider">Connect with me</p>
            <div className="flex space-x-6">
              {data.settings?.social.github && (
-               <a href={data.settings.social.github} target="_blank" rel="noopener noreferrer" className="bg-cream dark:bg-slate-800 p-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-white hover:bg-[#333] transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-sm border border-slate-100 dark:border-slate-700"><Github size={20} /></a>
+               <a 
+                 href={data.settings.social.github} 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="p-4 rounded-2xl bg-gradient-to-br from-sky-500/10 via-purple-500/10 to-sky-500/10 dark:from-sky-500/20 dark:via-purple-500/20 dark:to-sky-500/20 text-slate-800 dark:text-white border border-sky-200 dark:border-sky-800 hover:border-purple-400 hover:shadow-lg hover:shadow-sky-500/20 group transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                 aria-label="GitHub"
+               >
+                 <Github size={28} className="group-hover:scale-110 transition-transform" />
+               </a>
              )}
              {data.settings?.social.linkedin && (
-               <a href={data.settings.social.linkedin} target="_blank" rel="noopener noreferrer" className="bg-cream dark:bg-slate-800 p-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-white hover:bg-[#0077b5] transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm border border-slate-100 dark:border-slate-700"><Linkedin size={20} /></a>
+               <a 
+                 href={data.settings.social.linkedin} 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="p-4 rounded-2xl bg-gradient-to-br from-sky-500/10 via-purple-500/10 to-sky-500/10 dark:from-sky-500/20 dark:via-purple-500/20 dark:to-sky-500/20 text-[#0077b5] border border-sky-200 dark:border-sky-800 hover:border-purple-400 hover:shadow-lg hover:shadow-sky-500/20 group transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                 aria-label="LinkedIn"
+               >
+                 <Linkedin size={28} className="group-hover:scale-110 transition-transform" />
+               </a>
              )}
              {data.settings?.social.youtube && (
-               <a href={data.settings.social.youtube} target="_blank" rel="noopener noreferrer" className="bg-cream dark:bg-slate-800 p-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-white hover:bg-[#FF0000] transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm border border-slate-100 dark:border-slate-700"><Youtube size={20} /></a>
+               <a 
+                 href={data.settings.social.youtube} 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="p-4 rounded-2xl bg-gradient-to-br from-sky-500/10 via-purple-500/10 to-sky-500/10 dark:from-sky-500/20 dark:via-purple-500/20 dark:to-sky-500/20 text-[#FF0000] border border-sky-200 dark:border-sky-800 hover:border-purple-400 hover:shadow-lg hover:shadow-sky-500/20 group transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                 aria-label="YouTube"
+               >
+                 <Youtube size={28} className="group-hover:scale-110 transition-transform" />
+               </a>
              )}
            </div>
         </motion.div>

@@ -41,6 +41,12 @@ export interface HeroData {
   profileImage: string;
 }
 
+export interface AboutCard {
+  title: string;
+  description: string;
+  iconName: string;
+}
+
 export interface AboutData {
   title: string;
   bio1: string;
@@ -51,6 +57,7 @@ export interface AboutData {
     deliverySpeed: string;
   };
   imageUrl: string;
+  cards: AboutCard[];
 }
 
 export interface Message {

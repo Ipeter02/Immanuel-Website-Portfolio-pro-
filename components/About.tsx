@@ -1,11 +1,49 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Code2, Target, Zap, BookOpen } from 'lucide-react';
+import { 
+  Code, Server, Terminal, Globe, Database, Layout, Smartphone, Cloud, Palette, Zap, Shield, Search,
+  GitBranch, Box, Layers, Monitor, Wifi, Bluetooth, HardDrive, FileCode, FileJson, Hash, Braces,
+  Command, Chrome, Figma, Framer, Slack, Trello, Coffee, Link, Share2, Anchor, Award, Book,
+  Calendar, Camera, Circle, Clipboard, Clock, Compass, Copy, CreditCard, Disc, Download,
+  Edit, File, FileText, Filter, Flag, Folder, Gift, Grid, Heart,
+  Inbox, Info, Key, LifeBuoy, List, Map, MapPin, Mic, Moon, Music, Package, Paperclip,
+  Phone, PieChart, Play, Power, Printer, Radio, RefreshCw, Repeat, RotateCw, Rss,
+  Scissors, Send, ShoppingBag, ShoppingCart, Sliders, Speaker, Star, Sun, Table, Tag,
+  Thermometer, ThumbsUp, ToggleLeft, Wrench, Truck, Tv, Umbrella, Unlock, UserCheck,
+  UserPlus, Users, Video, Voicemail, Volume, Volume2, Watch, Youtube, TrendingUp, BarChart, DollarSign, Target,
+  Bookmark,
+  Code2, BookOpen
+} from 'lucide-react';
 import { useStore } from '../lib/store';
+
+// Helper to map string names to Lucide components - Matching Admin.tsx for consistency
+const AboutIconMap: any = { 
+  Code, Code2, Server, Terminal, Database, GitBranch, FileCode, Braces, Command, Hash, FileJson,
+  Globe, Layout, Smartphone, Monitor, Chrome, Wifi, Bluetooth,
+  Palette, PenTool: Layout, Figma, Framer, Image: Layout, Camera, Video, Music, Layers, Scissors,
+  Cloud, Cpu: Layout, HardDrive, Box, Power, Settings: Layout, Shield, Lock: Shield, Wrench,
+  Briefcase: Layout, TrendingUp, BarChart, PieChart, Target, DollarSign, CreditCard, ShoppingCart, ShoppingBag, Award,
+  MessageSquare: Layout, Mail: Layout, Phone, Send, Share2, Slack, Trello, User: Layout, Users, ThumbsUp, Heart, Star,
+  Home: Layout, Search, Menu: Layout, List, Grid, Filter, Calendar, Clock, MapPin, Link, ExternalLink: Link,
+  Zap, Info, AlertTriangle: Layout, Check: Layout, X: Layout, Trash2: Layout, Plus: Layout, Edit, Copy, Download, Upload: Layout,
+  BookOpen,
+  Coffee, Gift, Flag, Tag, Bookmark, Anchor, Key, Umbrella, Sun, Moon, Truck, Package
+};
 
 const About: React.FC = () => {
   const { data } = useStore();
   const { about } = data;
+  
+  // Fallback for older data structures if cards don't exist yet
+  const cards = about.cards || [
+    { title: "Development", description: "Clean code, modern patterns, and scalable architecture.", iconName: "Code2" },
+    { title: "Learning", description: "Constantly upskilling in System Design and Cloud Tech.", iconName: "BookOpen" }
+  ];
+
+  const bgColors = [
+    "bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400",
+    "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+  ];
 
   return (
     <section id="about" className="py-16 md:py-24 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
@@ -44,33 +82,27 @@ const About: React.FC = () => {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="p-5 bg-cream dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-default transition-colors hover:border-primary/20 shadow-sm"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-xl">
-                    <Code2 size={22} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white">Development</h4>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Clean code, modern patterns, and scalable architecture.</p>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="p-5 bg-cream dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-default transition-colors hover:border-primary/20 shadow-sm"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
-                    <BookOpen size={22} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white">Learning</h4>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Constantly upskilling in System Design and Cloud Tech.</p>
-              </motion.div>
+              {cards.map((card, idx) => {
+                  const Icon = AboutIconMap[card.iconName] || Code2;
+                  const colorClass = bgColors[idx % bgColors.length];
+                  
+                  return (
+                      <motion.div 
+                        key={idx}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="p-5 bg-cream dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-default transition-colors hover:border-primary/20 shadow-sm"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`p-2.5 rounded-xl ${colorClass}`}>
+                            <Icon size={22} />
+                          </div>
+                          <h4 className="font-bold text-slate-900 dark:text-white">{card.title}</h4>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{card.description}</p>
+                      </motion.div>
+                  );
+              })}
             </div>
           </motion.div>
 
