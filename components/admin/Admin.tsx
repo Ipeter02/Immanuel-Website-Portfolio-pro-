@@ -1161,10 +1161,12 @@ const ProjectsEditor: React.FC = () => {
     const [editForm, setEditForm] = useState<Project | null>(null);
     const [uploading, setUploading] = useState(false);
     const [newImageUrl, setNewImageUrl] = useState('');
+    const [newFeature, setNewFeature] = useState('');
 
     const handleEdit = (project: Project) => {
         setEditingId(project.id);
         setEditForm({ ...project });
+        setNewFeature('');
     };
 
     const handleSave = () => {
@@ -1210,6 +1212,24 @@ const ProjectsEditor: React.FC = () => {
         }
     };
 
+    const addFeature = () => {
+        if (newFeature.trim() && editForm) {
+            setEditForm({
+                ...editForm,
+                features: [...editForm.features, newFeature.trim()]
+            });
+            setNewFeature('');
+        }
+    };
+
+    const removeFeature = (idx: number) => {
+        if (editForm) {
+            const newFeatures = [...editForm.features];
+            newFeatures.splice(idx, 1);
+            setEditForm({ ...editForm, features: newFeatures });
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-8">
             <div className="flex justify-between items-center">
@@ -1227,6 +1247,7 @@ const ProjectsEditor: React.FC = () => {
                          features: [] 
                      };
                      setEditForm(newProject);
+                     setNewFeature('');
                      setEditingId(0);
                  }}><Plus size={16} className="mr-2"/> Add Project</Button>
             </div>
@@ -1255,14 +1276,52 @@ const ProjectsEditor: React.FC = () => {
                             
                             {/* Key Features Input */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 mb-1">Key Features (One per line)</label>
-                                <textarea 
-                                    value={editForm.features.join('\n')} 
-                                    onChange={e => setEditForm({...editForm, features: e.target.value.split('\n').filter(f => f.trim() !== '')})} 
-                                    placeholder="Feature 1&#10;Feature 2&#10;Feature 3" 
-                                    className="w-full p-3 border rounded-lg" 
-                                    rows={5} 
-                                />
+                                <label className="block text-xs font-bold text-slate-500 mb-2">Key Features</label>
+                                <div className="space-y-2 mb-3">
+                                    {editForm.features.map((feature, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 group">
+                                            <div className="p-1.5 bg-green-100 text-green-600 rounded-full shrink-0">
+                                                <Check size={12} />
+                                            </div>
+                                            <span className="flex-1 text-sm text-slate-700 font-medium">{feature}</span>
+                                            <button 
+                                                onClick={() => removeFeature(idx)}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                type="button"
+                                                title="Remove Feature"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {editForm.features.length === 0 && (
+                                        <div className="text-center py-4 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+                                            No features added yet. Add key highlights of this project.
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        value={newFeature}
+                                        onChange={e => setNewFeature(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addFeature();
+                                            }
+                                        }}
+                                        placeholder="Type a feature and press Enter (e.g. Real-time updates)"
+                                        className="flex-1 p-3 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" 
+                                    />
+                                    <Button 
+                                        onClick={addFeature} 
+                                        type="button"
+                                        disabled={!newFeature.trim()}
+                                        className="bg-slate-800 hover:bg-slate-700"
+                                    >
+                                        <Plus size={16} className="mr-2" /> Add
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Tech Stack - Simple Comma Separated for now */}
