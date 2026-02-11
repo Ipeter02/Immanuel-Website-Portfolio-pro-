@@ -50,7 +50,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
         <motion.img 
           src={project.images && project.images.length > 0 ? project.images[0] : ""} 
           alt={project.title} 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-top" // Changed to object-top to show header of websites
           initial={{ scale: 1.15 }}
           style={{ x: xTranslate, y: yTranslate }}
           whileHover={{ scale: 1.25 }}
@@ -176,75 +176,114 @@ const Portfolio: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-4xl w-[95%] md:w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col relative"
+                className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-5xl w-[95%] md:w-full max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col relative"
               >
                 <button 
                   onClick={() => setSelectedProject(null)}
-                  className="absolute top-4 right-4 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-30 backdrop-blur-md"
+                  className="absolute top-4 right-4 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-40 backdrop-blur-md"
                   aria-label="Close modal"
                 >
                     <X size={24} />
                 </button>
 
-                <div className="w-full h-56 sm:h-72 md:h-80 relative flex-shrink-0 bg-slate-900 group">
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-10 pointer-events-none" />
-                    
+                {/* Enhanced Image Viewer for All Aspect Ratios */}
+                <div className="w-full relative flex-shrink-0 bg-slate-950 group overflow-hidden" style={{ minHeight: '300px', maxHeight: '65vh' }}>
+                    {/* Blurred Background Layer to fill space */}
                     <AnimatePresence mode='wait'>
-                        <motion.img 
-                            key={activeImageIndex}
-                            src={selectedProject.images[activeImageIndex]} 
-                            alt={`${selectedProject.title} view ${activeImageIndex + 1}`} 
+                        <motion.div
+                            key={`bg-${activeImageIndex}`}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="w-full h-full object-cover"
-                        />
+                            transition={{ duration: 0.5 }}
+                            className="absolute inset-0 z-0"
+                        >
+                             <img 
+                                src={selectedProject.images[activeImageIndex]} 
+                                alt=""
+                                className="w-full h-full object-cover blur-xl opacity-50 scale-110" 
+                             />
+                             <div className="absolute inset-0 bg-black/30"></div>
+                        </motion.div>
                     </AnimatePresence>
+                    
+                    {/* Main Image Layer - Object Contain to show full image */}
+                    <div className="relative z-10 w-full h-full flex items-center justify-center p-4 md:p-8">
+                         <AnimatePresence mode='wait'>
+                            <motion.img 
+                                key={activeImageIndex}
+                                src={selectedProject.images[activeImageIndex]} 
+                                alt={`${selectedProject.title} view ${activeImageIndex + 1}`} 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.3 }}
+                                className="max-w-full max-h-[55vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+                            />
+                        </AnimatePresence>
+                    </div>
 
+                    {/* Navigation Controls */}
                     {selectedProject.images && selectedProject.images.length > 1 && (
                         <>
                             <button 
                                 onClick={prevImage} 
-                                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-md transition-all z-20"
                             >
                                 <ChevronLeft size={24} />
                             </button>
                             <button 
                                 onClick={nextImage} 
-                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/30 text-white backdrop-blur-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-md transition-all z-20"
                             >
                                 <ChevronRight size={24} />
                             </button>
-                            <div className="absolute bottom-6 right-6 md:right-auto md:left-1/2 md:-translate-x-1/2 flex gap-2 z-20 bg-black/20 backdrop-blur-sm p-1.5 rounded-full">
+                            
+                            {/* Dots */}
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20 bg-black/40 backdrop-blur-sm p-2 rounded-full">
                                 {selectedProject.images.map((_, idx) => (
                                     <button
                                         key={idx}
                                         onClick={(e) => { e.stopPropagation(); setActiveImageIndex(idx); }}
-                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === activeImageIndex ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/80 w-1.5'}`}
+                                        className={`h-2 rounded-full transition-all duration-300 ${idx === activeImageIndex ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/80 w-2'}`}
                                     />
                                 ))}
                             </div>
                         </>
                     )}
-
-                    <div className="absolute bottom-6 left-6 md:left-10 z-20 pointer-events-none pr-16 md:pr-0">
-                         <span className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-full uppercase tracking-wider mb-3 inline-block shadow-sm">
-                             {selectedProject.role}
-                         </span>
-                         <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shadow-sm leading-tight">
-                             {selectedProject.title}
-                         </h3>
-                    </div>
                 </div>
 
                 <div className="p-6 md:p-10">
-                    <div className="flex flex-col md:flex-row gap-8 md:gap-10">
+                     {/* Title Section (Moved out of image) */}
+                     <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                         <div>
+                            <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-wider mb-2 inline-block">
+                                {selectedProject.role}
+                            </span>
+                            <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white leading-tight">
+                                {selectedProject.title}
+                            </h3>
+                         </div>
+                         <div className="flex gap-3">
+                             {selectedProject.liveLink && (
+                                <Button href={selectedProject.liveLink} external size="md" className="shadow-lg shadow-primary/20">
+                                    Live Demo <ExternalLink size={16} className="ml-2"/>
+                                </Button>
+                             )}
+                             {selectedProject.repoLink && (
+                                <Button href={selectedProject.repoLink} external variant="outline" size="md">
+                                    Code <Github size={16} className="ml-2"/>
+                                </Button>
+                             )}
+                         </div>
+                     </div>
+
+                    <div className="flex flex-col md:flex-row gap-8 md:gap-10 border-t border-slate-100 dark:border-slate-800 pt-8">
                         <div className="flex-1 space-y-8">
                              {/* Short Description / Summary */}
-                             <div className="border-b border-slate-100 dark:border-slate-800 pb-6">
+                             <div>
                                 <h4 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Summary</h4>
-                                <p className="text-lg md:text-xl font-medium text-slate-900 dark:text-white leading-relaxed">
+                                <p className="text-lg font-medium text-slate-900 dark:text-white leading-relaxed">
                                     {selectedProject.description}
                                 </p>
                              </div>
@@ -252,12 +291,12 @@ const Portfolio: React.FC = () => {
                              {/* Long Description / Details */}
                              <div>
                                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Detailed Overview</h4>
-                                <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base md:text-lg whitespace-pre-wrap">
+                                <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap">
                                     {selectedProject.longDescription}
                                 </p>
                              </div>
 
-                             {/* Key Features - Redesigned */}
+                             {/* Key Features */}
                              <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6 md:p-8 border border-slate-100 dark:border-slate-800">
                                 <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                                   <div className="p-2 bg-gradient-to-br from-primary/10 to-secondary/10 text-primary rounded-lg">
@@ -281,21 +320,8 @@ const Portfolio: React.FC = () => {
                              </div>
                         </div>
 
-                        <div className="w-full md:w-72 flex-shrink-0 space-y-8">
-                            <div className="flex flex-col gap-3">
-                                {selectedProject.liveLink && (
-                                    <Button href={selectedProject.liveLink} external size="lg" className="w-full justify-center shadow-xl shadow-primary/20">
-                                        Live Demo <ExternalLink size={18} className="ml-2"/>
-                                    </Button>
-                                )}
-                                {selectedProject.repoLink && (
-                                    <Button href={selectedProject.repoLink} external variant="outline" size="lg" className="w-full justify-center">
-                                        View Code <Github size={18} className="ml-2"/>
-                                    </Button>
-                                )}
-                            </div>
-                            
-                            <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div className="w-full md:w-72 flex-shrink-0">
+                            <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 sticky top-4">
                                 <h4 className="font-bold text-slate-900 dark:text-white mb-4 uppercase text-xs tracking-wider flex items-center gap-2">
                                   <Layers size={14} className="text-slate-400"/> Technologies
                                 </h4>
