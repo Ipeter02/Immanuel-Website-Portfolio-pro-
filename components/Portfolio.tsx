@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { ExternalLink, Github, ArrowUpRight, X, CheckCircle2, Eye, ChevronLeft, ChevronRight, Star, Layers } from 'lucide-react';
+import { ExternalLink, Github, ArrowUpRight, X, CheckCircle2, Eye, ChevronLeft, ChevronRight, Star, Layers, Maximize2 } from 'lucide-react';
 import { Project } from '../types';
 import Button from './ui/Button';
 import { useStore } from '../lib/store';
@@ -50,7 +50,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
         <motion.img 
           src={project.images && project.images.length > 0 ? project.images[0] : ""} 
           alt={project.title} 
-          className="w-full h-full object-cover object-top" // Changed to object-top to show header of websites
+          className="w-full h-full object-cover object-top"
           initial={{ scale: 1.15 }}
           style={{ x: xTranslate, y: yTranslate }}
           whileHover={{ scale: 1.25 }}
@@ -116,23 +116,53 @@ const Portfolio: React.FC = () => {
   const { data } = useStore();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    if (selectedProject) setActiveImageIndex(0);
+    if (selectedProject) {
+        setActiveImageIndex(0);
+        setIsLightboxOpen(false);
+    }
   }, [selectedProject]);
 
-  const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (!selectedProject) return;
+        
+        if (isLightboxOpen) {
+            if (e.key === 'Escape') setIsLightboxOpen(false);
+            if (e.key === 'ArrowRight') navigateImage('next');
+            if (e.key === 'ArrowLeft') navigateImage('prev');
+        } else {
+            if (e.key === 'Escape') setSelectedProject(null);
+            if (e.key === 'ArrowRight') navigateImage('next');
+            if (e.key === 'ArrowLeft') navigateImage('prev');
+        }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, selectedProject]);
+
+  const navigateImage = (direction: 'next' | 'prev') => {
     if (selectedProject && selectedProject.images) {
-        setActiveImageIndex((prev) => (prev + 1) % selectedProject.images.length);
+        if (direction === 'next') {
+            setActiveImageIndex((prev) => (prev + 1) % selectedProject.images.length);
+        } else {
+            setActiveImageIndex((prev) => (prev - 1 + selectedProject.images.length) % selectedProject.images.length);
+        }
     }
   };
 
-  const prevImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (selectedProject && selectedProject.images) {
-        setActiveImageIndex((prev) => (prev - 1 + selectedProject.images.length) % selectedProject.images.length);
-    }
+  const handleNext = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigateImage('next');
+  };
+
+  const handlePrev = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigateImage('prev');
   };
 
   return (
@@ -161,6 +191,7 @@ const Portfolio: React.FC = () => {
         </div>
       </div>
 
+      {/* Project Detail Modal */}
       <AnimatePresence>
         {selectedProject && (
           <>
@@ -186,9 +217,9 @@ const Portfolio: React.FC = () => {
                     <X size={24} />
                 </button>
 
-                {/* Enhanced Image Viewer for All Aspect Ratios */}
+                {/* Enhanced Image Viewer */}
                 <div className="w-full relative flex-shrink-0 bg-slate-950 group overflow-hidden" style={{ minHeight: '300px', maxHeight: '65vh' }}>
-                    {/* Blurred Background Layer to fill space */}
+                    {/* Blurred Background Layer */}
                     <AnimatePresence mode='wait'>
                         <motion.div
                             key={`bg-${activeImageIndex}`}
@@ -207,8 +238,11 @@ const Portfolio: React.FC = () => {
                         </motion.div>
                     </AnimatePresence>
                     
-                    {/* Main Image Layer - Object Contain to show full image */}
-                    <div className="relative z-10 w-full h-full flex items-center justify-center p-4 md:p-8">
+                    {/* Main Image Layer */}
+                    <div 
+                        className="relative z-10 w-full h-full flex items-center justify-center p-4 md:p-8 cursor-zoom-in group/image"
+                        onClick={() => setIsLightboxOpen(true)}
+                    >
                          <AnimatePresence mode='wait'>
                             <motion.img 
                                 key={activeImageIndex}
@@ -221,19 +255,24 @@ const Portfolio: React.FC = () => {
                                 className="max-w-full max-h-[55vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
                             />
                         </AnimatePresence>
+                        
+                        {/* Hover Overlay Hint */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md text-white px-4 py-2 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center gap-2 pointer-events-none">
+                            <Maximize2 size={16} /> Click to Expand
+                        </div>
                     </div>
 
                     {/* Navigation Controls */}
                     {selectedProject.images && selectedProject.images.length > 1 && (
                         <>
                             <button 
-                                onClick={prevImage} 
+                                onClick={handlePrev} 
                                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-md transition-all z-20"
                             >
                                 <ChevronLeft size={24} />
                             </button>
                             <button 
-                                onClick={nextImage} 
+                                onClick={handleNext} 
                                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-md transition-all z-20"
                             >
                                 <ChevronRight size={24} />
@@ -254,7 +293,7 @@ const Portfolio: React.FC = () => {
                 </div>
 
                 <div className="p-6 md:p-10">
-                     {/* Title Section (Moved out of image) */}
+                     {/* Title Section */}
                      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                          <div>
                             <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-wider mb-2 inline-block">
@@ -280,7 +319,7 @@ const Portfolio: React.FC = () => {
 
                     <div className="flex flex-col md:flex-row gap-8 md:gap-10 border-t border-slate-100 dark:border-slate-800 pt-8">
                         <div className="flex-1 space-y-8">
-                             {/* Short Description / Summary */}
+                             {/* Short Description */}
                              <div>
                                 <h4 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Summary</h4>
                                 <p className="text-lg font-medium text-slate-900 dark:text-white leading-relaxed">
@@ -288,7 +327,7 @@ const Portfolio: React.FC = () => {
                                 </p>
                              </div>
 
-                             {/* Long Description / Details */}
+                             {/* Long Description */}
                              <div>
                                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Detailed Overview</h4>
                                 <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base whitespace-pre-wrap">
@@ -339,6 +378,63 @@ const Portfolio: React.FC = () => {
               </motion.div>
             </div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox Fullscreen View */}
+      <AnimatePresence>
+        {isLightboxOpen && selectedProject && (
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-sm"
+                onClick={() => setIsLightboxOpen(false)}
+            >
+                <button 
+                    className="absolute top-4 right-4 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-20"
+                    onClick={() => setIsLightboxOpen(false)}
+                >
+                    <X size={32} />
+                </button>
+
+                <div className="relative w-full h-full flex items-center justify-center p-4">
+                    <motion.img 
+                        key={activeImageIndex}
+                        src={selectedProject.images[activeImageIndex]} 
+                        alt="Fullscreen view"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.2 }}
+                        className="max-w-full max-h-full object-contain shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+
+                {/* Lightbox Controls */}
+                {selectedProject.images.length > 1 && (
+                    <>
+                        <button 
+                            className="absolute left-4 top-1/2 -translate-y-1/2 p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
+                            onClick={handlePrev}
+                        >
+                            <ChevronLeft size={48} />
+                        </button>
+                        <button 
+                            className="absolute right-4 top-1/2 -translate-y-1/2 p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
+                            onClick={handleNext}
+                        >
+                            <ChevronRight size={48} />
+                        </button>
+                        
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full font-medium tracking-widest text-sm backdrop-blur-md border border-white/10">
+                            {activeImageIndex + 1} / {selectedProject.images.length}
+                        </div>
+                    </>
+                )}
+            </motion.div>
         )}
       </AnimatePresence>
     </section>
