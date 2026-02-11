@@ -217,9 +217,9 @@ const Portfolio: React.FC = () => {
                     <X size={24} />
                 </button>
 
-                {/* Enhanced Image Viewer */}
+                {/* Enhanced Image Viewer - Modal Version */}
                 <div className="w-full relative flex-shrink-0 bg-slate-950 group overflow-hidden" style={{ minHeight: '300px', maxHeight: '65vh' }}>
-                    {/* Blurred Background Layer */}
+                    {/* Blurred Background Layer - Full Picture context */}
                     <AnimatePresence mode='wait'>
                         <motion.div
                             key={`bg-${activeImageIndex}`}
@@ -232,9 +232,9 @@ const Portfolio: React.FC = () => {
                              <img 
                                 src={selectedProject.images[activeImageIndex]} 
                                 alt=""
-                                className="w-full h-full object-cover blur-xl opacity-50 scale-110" 
+                                className="w-full h-full object-cover blur-xl opacity-60 scale-105" 
                              />
-                             <div className="absolute inset-0 bg-black/30"></div>
+                             <div className="absolute inset-0 bg-black/20"></div>
                         </motion.div>
                     </AnimatePresence>
                     
@@ -252,7 +252,7 @@ const Portfolio: React.FC = () => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.3 }}
-                                className="max-w-full max-h-[55vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[50vh] md:max-h-[55vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
                             />
                         </AnimatePresence>
                         
@@ -381,7 +381,7 @@ const Portfolio: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Lightbox Fullscreen View */}
+      {/* Lightbox Fullscreen View - Improved responsiveness and background */}
       <AnimatePresence>
         {isLightboxOpen && selectedProject && (
             <motion.div 
@@ -389,9 +389,26 @@ const Portfolio: React.FC = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-sm"
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95"
                 onClick={() => setIsLightboxOpen(false)}
             >
+                 {/* Blurred Background for Fullscreen - Shows "full picture" feel */}
+                 <div className="absolute inset-0 z-0 overflow-hidden">
+                    <AnimatePresence mode='wait'>
+                        <motion.img 
+                            key={`lb-bg-${activeImageIndex}`}
+                            src={selectedProject.images[activeImageIndex]} 
+                            alt="" 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.3 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-full h-full object-cover blur-3xl scale-110" 
+                        />
+                    </AnimatePresence>
+                     <div className="absolute inset-0 bg-black/40"></div>
+                </div>
+
                 <button 
                     className="absolute top-4 right-4 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-20"
                     onClick={() => setIsLightboxOpen(false)}
@@ -399,7 +416,7 @@ const Portfolio: React.FC = () => {
                     <X size={32} />
                 </button>
 
-                <div className="relative w-full h-full flex items-center justify-center p-4">
+                <div className="relative w-full h-full flex items-center justify-center p-4 z-10">
                     <motion.img 
                         key={activeImageIndex}
                         src={selectedProject.images[activeImageIndex]} 
@@ -408,8 +425,19 @@ const Portfolio: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.2 }}
-                        className="max-w-full max-h-full object-contain shadow-2xl"
+                        className="max-w-full max-h-[85vh] md:max-h-[90vh] object-contain shadow-2xl rounded-sm select-none"
                         onClick={(e) => e.stopPropagation()}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={(e, { offset, velocity }) => {
+                          const swipe = offset.x;
+                          if (swipe < -50) {
+                              navigateImage('next');
+                          } else if (swipe > 50) {
+                              navigateImage('prev');
+                          }
+                        }}
                     />
                 </div>
 
@@ -417,16 +445,16 @@ const Portfolio: React.FC = () => {
                 {selectedProject.images.length > 1 && (
                     <>
                         <button 
-                            className="absolute left-4 top-1/2 -translate-y-1/2 p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
+                            className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 p-2 md:p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
                             onClick={handlePrev}
                         >
-                            <ChevronLeft size={48} />
+                            <ChevronLeft size={36} className="md:w-12 md:h-12" />
                         </button>
                         <button 
-                            className="absolute right-4 top-1/2 -translate-y-1/2 p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
+                            className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 p-2 md:p-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
                             onClick={handleNext}
                         >
-                            <ChevronRight size={48} />
+                            <ChevronRight size={36} className="md:w-12 md:h-12" />
                         </button>
                         
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full font-medium tracking-widest text-sm backdrop-blur-md border border-white/10">
