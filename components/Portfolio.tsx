@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { ExternalLink, Github, ArrowUpRight, ChevronDown, Sparkles, X, CheckCircle2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ExternalLink, Github, ArrowUpRight, X, CheckCircle2, Eye, ChevronLeft, ChevronRight, Star, Layers } from 'lucide-react';
 import { Project } from '../types';
 import Button from './ui/Button';
 import { useStore } from '../lib/store';
 
 const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project: Project) => void }> = ({ project, index, onOpen }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -107,39 +106,6 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
                   </Button>
               )}
            </div>
-          
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-             <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between w-full group/btn focus:outline-none"
-             >
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 group-hover/btn:text-primary transition-colors">
-                    <Sparkles size={14} />
-                    <span>Key Challenge</span>
-                </div>
-                <ChevronDown 
-                    size={16} 
-                    className={`text-slate-400 group-hover/btn:text-primary transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-                />
-             </button>
-             <AnimatePresence>
-                {isExpanded && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="pt-3">
-                            <p className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed border-l-2 border-primary/30 pl-3 ml-1">
-                                "{project.challenges}"
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-             </AnimatePresence>
-          </div>
         </div>
       </div>
     </motion.div>
@@ -291,35 +257,34 @@ const Portfolio: React.FC = () => {
                                 </p>
                              </div>
 
-                             <div>
-                                <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                  <span className="w-1.5 h-6 bg-secondary rounded-full"></span>
+                             {/* Key Features - Redesigned */}
+                             <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6 md:p-8 border border-slate-100 dark:border-slate-800">
+                                <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                                  <div className="p-2 bg-gradient-to-br from-primary/10 to-secondary/10 text-primary rounded-lg">
+                                    <Star size={20} />
+                                  </div>
                                   Key Features
                                 </h4>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-4">
                                   {selectedProject.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-cream dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800">
-                                      <CheckCircle2 className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                                      <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{feature}</span>
-                                    </li>
+                                    <div key={idx} className="flex items-start gap-4 group">
+                                      <div className="mt-1 w-6 h-6 rounded-full bg-green-500/10 dark:bg-green-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/20 dark:group-hover:bg-green-500/30 transition-colors border border-green-500/20">
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                                      </div>
+                                      <span className="text-slate-700 dark:text-slate-300 font-medium leading-relaxed">{feature}</span>
+                                    </div>
                                   ))}
-                                </ul>
-                             </div>
-
-                             <div className="p-5 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10">
-                                <h4 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                                    <Sparkles className="text-primary" size={18} /> Technical Challenge
-                                </h4>
-                                <p className="text-slate-600 dark:text-slate-400 italic">
-                                    "{selectedProject.challenges}"
-                                </p>
+                                  {selectedProject.features.length === 0 && (
+                                    <p className="text-slate-400 italic">No specific features listed.</p>
+                                  )}
+                                </div>
                              </div>
                         </div>
 
                         <div className="w-full md:w-72 flex-shrink-0 space-y-8">
                             <div className="flex flex-col gap-3">
                                 {selectedProject.liveLink && (
-                                    <Button href={selectedProject.liveLink} external size="lg" className="w-full justify-center">
+                                    <Button href={selectedProject.liveLink} external size="lg" className="w-full justify-center shadow-xl shadow-primary/20">
                                         Live Demo <ExternalLink size={18} className="ml-2"/>
                                     </Button>
                                 )}
@@ -329,11 +294,14 @@ const Portfolio: React.FC = () => {
                                     </Button>
                                 )}
                             </div>
-                            <div>
-                                <h4 className="font-bold text-slate-900 dark:text-white mb-4 uppercase text-sm tracking-wider">Technologies</h4>
+                            
+                            <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                <h4 className="font-bold text-slate-900 dark:text-white mb-4 uppercase text-xs tracking-wider flex items-center gap-2">
+                                  <Layers size={14} className="text-slate-400"/> Technologies
+                                </h4>
                                 <div className="flex flex-wrap gap-2">
                                     {selectedProject.techStack.map(tech => (
-                                        <span key={tech} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-medium border border-slate-200 dark:border-slate-700">
+                                        <span key={tech} className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-medium border border-slate-200 dark:border-slate-700 shadow-sm">
                                             {tech}
                                         </span>
                                     ))}

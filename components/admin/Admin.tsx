@@ -443,7 +443,8 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   );
 };
 
-// --- Sub-Components ---
+// ... (Rest of components: DashboardHome, HeroEditor, AboutEditor, IconPicker, SkillsEditor, ServicesEditor)
+
 const DashboardHome: React.FC<{ setTab: (t: Tab) => void }> = ({ setTab }) => {
     const { data } = useStore();
     return (
@@ -516,6 +517,9 @@ const DashboardHome: React.FC<{ setTab: (t: Tab) => void }> = ({ setTab }) => {
         </div>
     );
 };
+
+// ... other components are unchanged, just re-exporting them implicitly via layout structure
+// Re-inserting component definitions to ensure context validity
 
 const HeroEditor: React.FC = () => {
     const { data, updateHero, uploadFile } = useStore();
@@ -611,7 +615,6 @@ const HeroEditor: React.FC = () => {
                                <span>Upload New Photo</span>
                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                            </label>
-                           <p className="text-xs text-slate-400 mt-2">Recommended: Square aspect ratio (1:1), 500x500px or larger.</p>
                         </div>
                      </div>
                  </div>
@@ -639,7 +642,6 @@ const HeroEditor: React.FC = () => {
                              </label>
                          )}
                      </div>
-                     <p className="text-xs text-slate-400">These images will rotate automatically in the hero background.</p>
                  </div>
             </div>
         </div>
@@ -651,7 +653,6 @@ const AboutEditor: React.FC = () => {
     const [localData, setLocalData] = useState(data.about);
     const [uploading, setUploading] = useState(false);
 
-    // Initialize cards if they don't exist (e.g. from older data)
     useEffect(() => {
         if (!localData.cards) {
             setLocalData(prev => ({
@@ -716,10 +717,8 @@ const AboutEditor: React.FC = () => {
                     <textarea name="bio2" value={localData.bio2} onChange={handleChange} rows={4} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" />
                  </div>
 
-                 {/* Info Cards Editor */}
                  <div className="pt-6 border-t border-slate-100">
                      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Layout size={18} /> Info Cards</h3>
-                     <p className="text-sm text-slate-500 mb-4">Edit the two highlight cards displayed in the About section.</p>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {localData.cards?.map((card, idx) => (
                             <div key={idx} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
@@ -784,16 +783,12 @@ const AboutEditor: React.FC = () => {
     );
 };
 
-// --- Icon Picker Component ---
 const IconPicker: React.FC<{ value: string; onChange: (val: string) => void; showLabel?: boolean }> = ({ value, onChange, showLabel = false }) => {
-    // ... (Keeping existing implementation)
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Convert current icon string to component for preview
     const CurrentIcon = ICON_MAP[value] || Code;
 
-    // Logic to flatten or render categories
     const renderIcons = () => {
         if (searchTerm) {
              const filtered = AVAILABLE_ICONS.filter(iconName => 
@@ -879,17 +874,11 @@ const IconPicker: React.FC<{ value: string; onChange: (val: string) => void; sho
     );
 };
 
-// ... (Rest of components: SkillsEditor, ServicesEditor, ProjectsEditor, MessagesViewer, SettingsEditor, export default Admin)
 const SkillsEditor: React.FC = () => {
     const { data, updateSkills } = useStore();
     const [localSkills, setLocalSkills] = useState(data.skills);
-    
-    // Controlled inputs for each category's quick add field
     const [quickAddInputs, setQuickAddInputs] = useState<{[key: number]: string}>({});
-    
     const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
-    
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCatTitle, setNewCatTitle] = useState('');
     const [newCatIcon, setNewCatIcon] = useState('Code');
@@ -919,12 +908,9 @@ const SkillsEditor: React.FC = () => {
         const newSkills = [...localSkills];
         newSkills[catIdx].skills.push({ name: name.trim() });
         setLocalSkills(newSkills);
-        
-        // Clear input
         setQuickAddInputs({ ...quickAddInputs, [catIdx]: '' });
     };
 
-    // Open Modal logic
     const openAddCategoryModal = () => {
         setNewCatTitle('');
         setNewCatIcon('Code');
@@ -947,7 +933,6 @@ const SkillsEditor: React.FC = () => {
         setNewCatSkills(newCatSkills.filter((_, i) => i !== index));
     };
 
-    // Confirm logic
     const confirmAddCategory = () => {
         if (!newCatTitle.trim()) {
             alert("Please enter a category title.");
@@ -979,8 +964,7 @@ const SkillsEditor: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {localSkills.map((cat, catIdx) => (
-                    <div key={catIdx} className={`bg-white p-6 rounded-2xl shadow-sm border ${deleteConfirmIdx === catIdx ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-100'} relative group transition-all hover:shadow-md flex flex-col h-full`}>
-                        {/* Header: Icon, Title, Delete */}
+                    <div key={catIdx} className={`bg-white p-6 rounded-2xl shadow-sm border ${deleteConfirmIdx === catIdx ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-100'} relative group flex flex-col h-full`}>
                         <div className="flex items-start gap-4 mb-6 border-b border-slate-100 pb-4">
                             <IconPicker 
                                 value={cat.iconName} 
@@ -1002,51 +986,25 @@ const SkillsEditor: React.FC = () => {
                                 <div className="flex flex-col gap-1 items-end animate-in fade-in slide-in-from-right-4 duration-200">
                                     <span className="text-[10px] font-bold text-red-500 uppercase">Delete?</span>
                                     <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => setDeleteConfirmIdx(null)}
-                                            className="p-2 text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button 
-                                            onClick={() => confirmDeleteCategory(catIdx)}
-                                            className="p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold shadow-sm shadow-red-500/30"
-                                        >
-                                            Confirm
-                                        </button>
+                                        <button onClick={() => setDeleteConfirmIdx(null)} className="p-2 text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold">Cancel</button>
+                                        <button onClick={() => confirmDeleteCategory(catIdx)} className="p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold shadow-sm shadow-red-500/30">Confirm</button>
                                     </div>
                                 </div>
                             ) : (
-                                <button 
-                                    onClick={() => setDeleteConfirmIdx(catIdx)}
-                                    className="p-2.5 text-slate-400 hover:text-white hover:bg-red-500 rounded-xl transition-all shadow-sm hover:shadow-red-500/30"
-                                    title="Delete Entire Category"
-                                >
-                                    <Trash2 size={20} />
-                                </button>
+                                <button onClick={() => setDeleteConfirmIdx(catIdx)} className="p-2.5 text-slate-400 hover:text-white hover:bg-red-500 rounded-xl transition-all shadow-sm hover:shadow-red-500/30" title="Delete Entire Category"><Trash2 size={20} /></button>
                             )}
                         </div>
 
-                        {/* Skills List - Tag Based */}
                         <div className="flex flex-wrap gap-2 mb-4 flex-grow content-start">
                              {cat.skills.map((skill, skillIdx) => (
                                  <div key={skillIdx} className="group/skill flex items-center bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-1 py-1 text-sm font-medium text-slate-700 hover:border-red-200 hover:bg-red-50 transition-colors cursor-default">
                                      <span>{skill.name}</span>
-                                     <button 
-                                        onClick={() => handleRemoveSkill(catIdx, skillIdx)}
-                                        className="ml-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-all"
-                                        title="Delete Skill"
-                                     >
-                                         <X size={14} />
-                                     </button>
+                                     <button onClick={() => handleRemoveSkill(catIdx, skillIdx)} className="ml-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-all" title="Delete Skill"><X size={14} /></button>
                                  </div>
                              ))}
-                             {cat.skills.length === 0 && (
-                                <p className="text-sm text-slate-400 italic py-2">No skills added yet.</p>
-                             )}
+                             {cat.skills.length === 0 && <p className="text-sm text-slate-400 italic py-2">No skills added yet.</p>}
                         </div>
 
-                        {/* Quick Add Skill Input - Controlled & Clickable */}
                         <div className="mt-auto pt-3 border-t border-slate-50">
                             <div className="flex items-center gap-2">
                                 <input 
@@ -1055,47 +1013,28 @@ const SkillsEditor: React.FC = () => {
                                     value={quickAddInputs[catIdx] || ''}
                                     onChange={(e) => handleQuickInputChange(catIdx, e.target.value)}
                                     className="flex-1 text-sm p-2 bg-transparent border-none focus:ring-0 placeholder-slate-400"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleAddSkillName(catIdx);
-                                        }
-                                    }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddSkillName(catIdx); }}
                                 />
-                                <button 
-                                    onClick={() => handleAddSkillName(catIdx)}
-                                    className="text-[10px] text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded border border-slate-200 font-bold uppercase transition-colors"
-                                >
-                                    Enter
-                                </button>
+                                <button onClick={() => handleAddSkillName(catIdx)} className="text-[10px] text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded border border-slate-200 font-bold uppercase transition-colors">Enter</button>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Add Category Modal (Same as before) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="flex justify-between items-center mb-6 flex-shrink-0">
                             <h3 className="text-xl font-bold text-slate-800">Add New Category</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                <X size={20} />
-                            </button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
                         </div>
                         
                         <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                            {/* Title & Icon Row */}
                             <div className="flex gap-4">
                                 <div className="flex-1">
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Category Name</label>
-                                    <input 
-                                        value={newCatTitle}
-                                        onChange={(e) => setNewCatTitle(e.target.value)}
-                                        placeholder="e.g. Backend Development"
-                                        className="w-full p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                                        autoFocus
-                                    />
+                                    <input value={newCatTitle} onChange={(e) => setNewCatTitle(e.target.value)} placeholder="e.g. Backend Development" className="w-full p-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" autoFocus />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Icon</label>
@@ -1103,43 +1042,21 @@ const SkillsEditor: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Skills Section */}
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Initial Skills</label>
                                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                                     <div className="flex gap-2 mb-3">
-                                        <input 
-                                            value={tempSkillInput}
-                                            onChange={(e) => setTempSkillInput(e.target.value)}
-                                            onKeyDown={handleAddTempSkill}
-                                            placeholder="Type skill & press Enter"
-                                            className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-primary outline-none"
-                                        />
-                                        <button 
-                                            onClick={() => {
-                                                if(tempSkillInput.trim()) {
-                                                    setNewCatSkills([...newCatSkills, tempSkillInput.trim()]);
-                                                    setTempSkillInput('');
-                                                }
-                                            }}
-                                            className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            Add
-                                        </button>
+                                        <input value={tempSkillInput} onChange={(e) => setTempSkillInput(e.target.value)} onKeyDown={handleAddTempSkill} placeholder="Type skill & press Enter" className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-primary outline-none" />
+                                        <button onClick={() => { if(tempSkillInput.trim()) { setNewCatSkills([...newCatSkills, tempSkillInput.trim()]); setTempSkillInput(''); } }} className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition-colors">Add</button>
                                     </div>
-                                    
                                     <div className="flex flex-wrap gap-2">
                                         {newCatSkills.map((skill, idx) => (
                                             <div key={idx} className="flex items-center gap-1 pl-3 pr-1 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm animate-in zoom-in-50 duration-200">
                                                 <span>{skill}</span>
-                                                <button onClick={() => handleRemoveTempSkill(idx)} className="p-1 hover:text-red-500 rounded-full">
-                                                    <X size={14} />
-                                                </button>
+                                                <button onClick={() => handleRemoveTempSkill(idx)} className="p-1 hover:text-red-500 rounded-full"><X size={14} /></button>
                                             </div>
                                         ))}
-                                        {newCatSkills.length === 0 && (
-                                            <p className="text-xs text-slate-400 italic w-full text-center py-2">No skills added yet</p>
-                                        )}
+                                        {newCatSkills.length === 0 && <p className="text-xs text-slate-400 italic w-full text-center py-2">No skills added yet</p>}
                                     </div>
                                 </div>
                             </div>
@@ -1157,7 +1074,6 @@ const SkillsEditor: React.FC = () => {
 };
 
 const ServicesEditor: React.FC = () => {
-    // ... (Keeping existing implementation)
     const { data, addService, updateService, deleteService } = useStore();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Service | null>(null);
@@ -1191,11 +1107,7 @@ const ServicesEditor: React.FC = () => {
                     <div className="flex flex-col md:flex-row gap-8 items-start">
                         <div className="flex-shrink-0">
                             <label className="block text-sm font-bold text-slate-700 mb-2">Service Icon</label>
-                            <IconPicker 
-                                value={editForm.iconName} 
-                                onChange={(val) => setEditForm({...editForm, iconName: val})} 
-                                showLabel={true} 
-                            />
+                            <IconPicker value={editForm.iconName} onChange={(val) => setEditForm({...editForm, iconName: val})} showLabel={true} />
                         </div>
                         <div className="flex-1 space-y-4 w-full">
                             <div>
@@ -1211,11 +1123,7 @@ const ServicesEditor: React.FC = () => {
                                 <textarea value={editForm.longDescription} onChange={e => setEditForm({...editForm, longDescription: e.target.value})} placeholder="Long Description" className="w-full p-3 border rounded-lg" rows={4} />
                             </div>
                             <div className="flex gap-4 mt-6">
-                                <Button onClick={() => {
-                                    if (editingId === 'new') addService(editForm);
-                                    else handleSave();
-                                    setEditingId(null);
-                                }}>Save Service</Button>
+                                <Button onClick={() => { if (editingId === 'new') addService(editForm); else handleSave(); setEditingId(null); }}>Save Service</Button>
                                 <Button variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
                             </div>
                         </div>
@@ -1344,8 +1252,19 @@ const ProjectsEditor: React.FC = () => {
                         </div>
                         <div className="space-y-4">
                             <textarea value={editForm.longDescription} onChange={e => setEditForm({...editForm, longDescription: e.target.value})} placeholder="Detailed Description" className="w-full p-3 border rounded-lg" rows={6} />
-                            <textarea value={editForm.challenges} onChange={e => setEditForm({...editForm, challenges: e.target.value})} placeholder="Key Challenge / Insight" className="w-full p-3 border rounded-lg" rows={2} />
                             
+                            {/* Key Features Input */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Key Features (One per line)</label>
+                                <textarea 
+                                    value={editForm.features.join('\n')} 
+                                    onChange={e => setEditForm({...editForm, features: e.target.value.split('\n').filter(f => f.trim() !== '')})} 
+                                    placeholder="Feature 1&#10;Feature 2&#10;Feature 3" 
+                                    className="w-full p-3 border rounded-lg" 
+                                    rows={5} 
+                                />
+                            </div>
+
                             {/* Tech Stack - Simple Comma Separated for now */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">Tech Stack / Tools (Comma Separated)</label>
@@ -1464,8 +1383,6 @@ const SettingsEditor: React.FC = () => {
     const { data, updateSettings, uploadFile, resetData, connectionStatus } = useStore();
     const [local, setLocal] = useState(data.settings);
     const [uploading, setUploading] = useState(false);
-    
-    // Password Change State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -1498,13 +1415,10 @@ const SettingsEditor: React.FC = () => {
     const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        // Check file type (PDF)
         if (file.type !== 'application/pdf') {
             alert("Please upload a PDF file.");
             return;
         }
-
         setUploading(true);
         try {
             const url = await uploadFile(file);
@@ -1521,40 +1435,31 @@ const SettingsEditor: React.FC = () => {
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setPasswordMsg('');
-        
-        // Validation
         if (!newPassword || !confirmPassword) {
             setPasswordStatus('error');
             setPasswordMsg('Please fill in new password fields.');
             return;
         }
-
         if (newPassword.length < 6) {
             setPasswordStatus('error');
             setPasswordMsg('Password must be at least 6 characters.');
             return;
         }
-
         if (newPassword !== confirmPassword) {
             setPasswordStatus('error');
             setPasswordMsg('New passwords do not match.');
             return;
         }
-
         setPasswordStatus('saving');
-
         try {
             if (supabase) {
-                // For Supabase, ideally we re-authenticate, but update is allowed if session is active
                 const { error } = await supabase.auth.updateUser({ password: newPassword });
                 if (error) throw error;
             } else {
-                // Local mode check
                 const stored = localStorage.getItem('admin_local_password') || 'admin';
                 if (currentPassword !== stored) {
                     throw new Error('Incorrect current password.');
                 }
-                // Local mode update
                 localStorage.setItem('admin_local_password', newPassword);
             }
             setPasswordStatus('success');
@@ -1647,7 +1552,6 @@ const SettingsEditor: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* Security Section */}
                  <div className="pt-6 border-t border-slate-100">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <LockKeyhole size={18} /> Security
@@ -1656,41 +1560,21 @@ const SettingsEditor: React.FC = () => {
                         {connectionStatus === 'local' && (
                              <div className="mb-4">
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Current Password</label>
-                                <input 
-                                    type="password" 
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" 
-                                    placeholder="••••••••"
-                                />
+                                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" placeholder="••••••••" />
                             </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">New Password</label>
-                                <input 
-                                    type="password" 
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" 
-                                    placeholder="••••••••"
-                                />
+                                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" placeholder="••••••••" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Confirm Password</label>
-                                <input 
-                                    type="password" 
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" 
-                                    placeholder="••••••••"
-                                />
+                                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none" placeholder="••••••••" />
                             </div>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className={`text-sm font-medium ${passwordStatus === 'error' ? 'text-red-500' : 'text-green-500'}`}>
-                                {passwordMsg}
-                            </span>
+                            <span className={`text-sm font-medium ${passwordStatus === 'error' ? 'text-red-500' : 'text-green-500'}`}>{passwordMsg}</span>
                             <Button type="submit" disabled={passwordStatus === 'saving' || !newPassword} className="bg-slate-800 hover:bg-slate-700">
                                 {passwordStatus === 'saving' ? 'Updating...' : 'Update Password'}
                             </Button>
@@ -1698,7 +1582,6 @@ const SettingsEditor: React.FC = () => {
                     </form>
                  </div>
 
-                 {/* Danger Zone */}
                  <div className="mt-8 pt-8 border-t border-slate-200">
                     <h3 className="text-red-600 font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider">
                         <AlertOctagon size={16} /> Danger Zone
@@ -1706,17 +1589,9 @@ const SettingsEditor: React.FC = () => {
                     <div className="border border-red-200 bg-red-50 rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
                             <h4 className="font-bold text-red-900">Reset Website Data</h4>
-                            <p className="text-red-700 text-sm mt-1 max-w-md">
-                                This will permanently delete all projects, services, custom text, and messages, restoring the site to its initial installation state.
-                            </p>
+                            <p className="text-red-700 text-sm mt-1 max-w-md">This will permanently delete all projects, services, custom text, and messages, restoring the site to its initial installation state.</p>
                         </div>
-                        <Button 
-                            type="button" 
-                            onClick={handleReset} 
-                            className="bg-white hover:bg-red-100 text-red-600 border border-red-200 shadow-sm whitespace-nowrap"
-                        >
-                            Reset to Defaults
-                        </Button>
+                        <Button type="button" onClick={handleReset} className="bg-white hover:bg-red-100 text-red-600 border border-red-200 shadow-sm whitespace-nowrap">Reset to Defaults</Button>
                     </div>
                  </div>
             </div>
