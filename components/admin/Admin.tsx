@@ -1077,16 +1077,36 @@ const ServicesEditor: React.FC = () => {
     const { data, addService, updateService, deleteService } = useStore();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Service | null>(null);
+    const [newFeature, setNewFeature] = useState('');
 
     const handleEdit = (service: Service) => {
         setEditingId(service.id);
         setEditForm({ ...service });
+        setNewFeature('');
     };
 
     const handleSave = () => {
         if (editForm) {
             updateService(editForm);
             setEditingId(null);
+        }
+    };
+
+    const addFeature = () => {
+        if (newFeature.trim() && editForm) {
+            setEditForm({
+                ...editForm,
+                features: [...editForm.features, newFeature.trim()]
+            });
+            setNewFeature('');
+        }
+    };
+
+    const removeFeature = (idx: number) => {
+        if (editForm) {
+            const newFeatures = [...editForm.features];
+            newFeatures.splice(idx, 1);
+            setEditForm({ ...editForm, features: newFeatures });
         }
     };
     
@@ -1097,6 +1117,7 @@ const ServicesEditor: React.FC = () => {
                  <Button onClick={() => {
                      const newService = { id: 'new', title: 'New Service', description: '', iconName: 'Code', longDescription: '', features: [] };
                      setEditForm(newService);
+                     setNewFeature('');
                      setEditingId('new');
                  }}><Plus size={16} className="mr-2"/> Add Service</Button>
             </div>
@@ -1122,6 +1143,57 @@ const ServicesEditor: React.FC = () => {
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Detailed Description (Modal)</label>
                                 <textarea value={editForm.longDescription} onChange={e => setEditForm({...editForm, longDescription: e.target.value})} placeholder="Long Description" className="w-full p-3 border rounded-lg" rows={4} />
                             </div>
+                            
+                            {/* Key Features Input */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Key Features</label>
+                                <div className="space-y-2 mb-3">
+                                    {editForm.features.map((feature, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 group">
+                                            <div className="p-1.5 bg-green-100 text-green-600 rounded-full shrink-0">
+                                                <Check size={12} />
+                                            </div>
+                                            <span className="flex-1 text-sm text-slate-700 font-medium">{feature}</span>
+                                            <button 
+                                                onClick={() => removeFeature(idx)}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                type="button"
+                                                title="Remove Feature"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {editForm.features.length === 0 && (
+                                        <div className="text-center py-4 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+                                            No features added yet. Add key highlights of this service.
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        value={newFeature}
+                                        onChange={e => setNewFeature(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addFeature();
+                                            }
+                                        }}
+                                        placeholder="Type a feature and press Enter"
+                                        className="flex-1 p-3 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" 
+                                    />
+                                    <Button 
+                                        onClick={addFeature} 
+                                        type="button"
+                                        disabled={!newFeature.trim()}
+                                        className="bg-slate-800 hover:bg-slate-700"
+                                    >
+                                        <Plus size={16} className="mr-2" /> Add
+                                    </Button>
+                                </div>
+                            </div>
+
                             <div className="flex gap-4 mt-6">
                                 <Button onClick={() => { if (editingId === 'new') addService(editForm); else handleSave(); setEditingId(null); }}>Save Service</Button>
                                 <Button variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
