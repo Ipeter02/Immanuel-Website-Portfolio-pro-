@@ -21,7 +21,7 @@ import {
   Code2, BookOpen
 } from 'lucide-react';
 import Button from '../ui/Button';
-import { Project, Service, SkillCategory } from '../../types';
+import { Project, Service, SkillCategory, Message } from '../../types';
 
 // --- Icon Mapping ---
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -1475,14 +1475,59 @@ const ProjectsEditor: React.FC = () => {
 };
 
 const MessagesViewer: React.FC = () => {
-    const { data, markMessageRead, deleteMessage } = useStore();
+    const { data, markMessageRead, deleteMessage, replyToMessage } = useStore();
+    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+    const [viewingMessage, setViewingMessage] = useState<Message | null>(null);
+    const [replySubject, setReplySubject] = useState('');
+    const [replyBody, setReplyBody] = useState('');
+    const [sending, setSending] = useState(false);
+
+    const handleReplyClick = (msg: Message) => {
+        setReplyingTo(msg);
+        setViewingMessage(null); // Close view modal if open
+        setReplySubject(`Re: Contact from ${msg.name}`);
+        setReplyBody(`Hi ${msg.name},\n\nThank you for your message.\n\nBest regards,\nImmanuel`);
+    };
+
+    const handleViewClick = (msg: Message) => {
+        setViewingMessage(msg);
+        if (!msg.read) {
+            markMessageRead(msg.id);
+        }
+    };
+
+    const handleDelete = (id: string) => {
+        if (window.confirm('Are you sure you want to delete this message?')) {
+            deleteMessage(id);
+            if (viewingMessage?.id === id) setViewingMessage(null);
+        }
+    };
+
+    const sendReply = async () => {
+        if (!replyingTo) return;
+        setSending(true);
+        try {
+            await replyToMessage(replyingTo.email, replySubject, replyBody, replyingTo.id);
+            alert('Reply sent successfully!');
+            setReplyingTo(null);
+        } catch (error: any) {
+            alert('Failed to send reply: ' + error.message);
+        } finally {
+            setSending(false);
+        }
+    };
+
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 relative">
             <h2 className="text-2xl font-bold text-slate-800">Contact Messages</h2>
             <div className="space-y-4">
                 {data.messages.map(msg => (
-                    <div key={msg.id} className={`bg-white p-6 rounded-2xl shadow-sm border ${msg.read ? 'border-slate-100 opacity-75' : 'border-primary/30 ring-1 ring-primary/10'}`}>
-                        <div className="flex justify-between items-start mb-4">
+                    <div 
+                        key={msg.id} 
+                        onClick={() => handleViewClick(msg)}
+                        className={`bg-white p-6 rounded-2xl shadow-sm border cursor-pointer transition-all hover:shadow-md ${msg.read ? 'border-slate-100 opacity-75' : 'border-primary/30 ring-1 ring-primary/10'}`}
+                    >
+                        <div className="flex justify-between items-start mb-4 pointer-events-none">
                             <div className="flex items-center gap-3">
                                 <div className={`w-2 h-2 rounded-full ${msg.read ? 'bg-slate-300' : 'bg-primary'}`}></div>
                                 <div>
@@ -1492,20 +1537,97 @@ const MessagesViewer: React.FC = () => {
                             </div>
                             <span className="text-xs text-slate-400">{new Date(msg.date).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-slate-600 text-sm leading-relaxed mb-4 bg-slate-50 p-3 rounded-lg">{msg.message}</p>
-                        <div className="flex gap-3 justify-end">
+                        <p className="text-slate-600 text-sm leading-relaxed mb-4 bg-slate-50 p-3 rounded-lg line-clamp-2 pointer-events-none">{msg.message}</p>
+                        <div className="flex gap-3 justify-end" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => handleReplyClick(msg)} className="text-xs font-bold text-blue-500 flex items-center gap-1 hover:underline">
+                                <Mail size={14} /> Reply
+                            </button>
                             {!msg.read && (
                                 <button onClick={() => markMessageRead(msg.id)} className="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
                                     <Check size={14} /> Mark Read
                                 </button>
                             )}
-                            <button onClick={() => deleteMessage(msg.id)} className="text-xs font-bold text-red-500 flex items-center gap-1 hover:underline">
+                            <button onClick={() => handleDelete(msg.id)} className="text-xs font-bold text-red-500 flex items-center gap-1 hover:underline">
                                 <Trash2 size={14} /> Delete
                             </button>
                         </div>
                     </div>
                 ))}
+                {data.messages.length === 0 && <p className="text-center text-slate-400 py-8">No messages yet.</p>}
             </div>
+
+            {/* View Message Modal */}
+            {viewingMessage && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setViewingMessage(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-800">{viewingMessage.name}</h3>
+                                <p className="text-slate-500 text-sm flex items-center gap-2 mt-1">
+                                    <Mail size={14} /> {viewingMessage.email}
+                                </p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    {new Date(viewingMessage.date).toLocaleString()}
+                                </p>
+                            </div>
+                            <button onClick={() => setViewingMessage(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 mb-8 whitespace-pre-wrap text-slate-700 leading-relaxed">
+                            {viewingMessage.message}
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                            <Button variant="ghost" onClick={() => handleDelete(viewingMessage.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                                <Trash2 size={18} className="mr-2" /> Delete
+                            </Button>
+                            <Button onClick={() => handleReplyClick(viewingMessage)}>
+                                <Mail size={18} className="mr-2" /> Reply
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reply Modal */}
+            {replyingTo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-slate-800">Reply to {replyingTo.name}</h3>
+                            <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                                <input 
+                                    value={replySubject}
+                                    onChange={(e) => setReplySubject(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
+                                <textarea 
+                                    value={replyBody}
+                                    onChange={(e) => setReplyBody(e.target.value)}
+                                    rows={6}
+                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <Button variant="ghost" onClick={() => setReplyingTo(null)}>Cancel</Button>
+                                <Button onClick={sendReply} disabled={sending}>
+                                    {sending ? <Loader2 className="animate-spin" /> : <Send size={16} className="mr-2" />}
+                                    Send Reply
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

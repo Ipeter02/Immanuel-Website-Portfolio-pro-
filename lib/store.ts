@@ -4,8 +4,8 @@ import { supabase } from './supabase';
 
 // Check if we are using the custom backend
 const env = (import.meta as any).env;
-const USE_CUSTOM_SERVER = env?.VITE_USE_CUSTOM_SERVER === 'true';
-const CUSTOM_API_URL = env?.VITE_CUSTOM_API_URL || 'http://localhost:3001/api';
+const USE_CUSTOM_SERVER = env?.VITE_USE_CUSTOM_SERVER !== 'false'; // Default to true unless explicitly disabled
+const CUSTOM_API_URL = env?.VITE_CUSTOM_API_URL || '/api';
 
 const defaultHero: HeroData = {
   headline: "Hi, I'm Immanuel Gondwe",
@@ -433,6 +433,21 @@ export const useStore = () => {
     return true;
   };
 
+  // Reply to Message
+  const replyToMessage = async (to: string, subject: string, message: string, originalMessageId: string) => {
+      if (USE_CUSTOM_SERVER) {
+          const res = await fetch(`${CUSTOM_API_URL}/reply`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to, subject, message, originalMessageId })
+          });
+          if (!res.ok) throw new Error('Failed to send reply');
+          return true;
+      } else {
+          throw new Error("Cannot send email in local/offline mode. Please configure backend.");
+      }
+  };
+
   const updateHero = (hero: HeroData) => saveData({ ...globalData, hero });
   const updateAbout = (about: AboutData) => saveData({ ...globalData, about });
   const addProject = (project: Project) => saveData({ ...globalData, projects: [{ ...project, id: Date.now() }, ...globalData.projects] });
@@ -455,7 +470,7 @@ export const useStore = () => {
     connectionStatus: globalConnectionStatus,
     uploadFile,
     updateHero, updateAbout, addProject, updateProject, deleteProject, updateSkills,
-    addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage,
+    addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage, replyToMessage,
     updateSettings, resetData
   };
 };
