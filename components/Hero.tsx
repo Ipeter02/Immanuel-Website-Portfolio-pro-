@@ -88,7 +88,7 @@ const Hero: React.FC = () => {
   const downloadAttr = data.settings.resumeUrl ? "Immanuel_Gondwe_Resume.pdf" : undefined;
 
   return (
-    <section id="home" className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden py-24 lg:py-0" aria-label="Introduction">
+    <section id="home" className="min-h-[85dvh] flex items-center justify-center relative overflow-hidden py-20 lg:py-0" aria-label="Introduction">
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-slate-900">
         <AnimatePresence mode="popLayout">
             <motion.img

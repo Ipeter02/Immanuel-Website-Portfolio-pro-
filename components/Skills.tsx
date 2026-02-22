@@ -24,12 +24,13 @@ const Skills: React.FC = () => {
   const { data } = useStore();
 
   return (
-    <section id="skills" className="py-16 bg-cream dark:bg-slate-900 transition-colors duration-300" aria-label="Technical Skills">
+    <section id="skills" className="py-12 md:py-16 bg-cream dark:bg-slate-900 transition-colors duration-300" aria-label="Technical Skills">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center mb-12"
         >
           <span className="text-primary font-semibold tracking-wider uppercase text-sm">My Expertise</span>
@@ -46,10 +47,10 @@ const Skills: React.FC = () => {
             return (
               <motion.div
                 key={category.title}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: categoryIndex * 0.15 }}
                 className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/5 flex flex-col hover:border-primary dark:hover:border-primary transition-all duration-300 relative overflow-hidden"
               >
                 {/* Hover Gradient Background Effect */}

@@ -44,16 +44,17 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <section id="contact" className="pt-16 pb-0 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden" aria-label="Contact Section">
+    <section id="contact" className="pt-12 md:pt-16 pb-0 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden" aria-label="Contact Section">
       <div className="absolute inset-0 pointer-events-none">
          <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 dark:bg-primary/20 blur-[100px] rounded-full mix-blend-screen opacity-60"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center mb-12"
         >
           <span className="text-primary font-semibold tracking-wider uppercase text-sm">Contact</span>
@@ -63,9 +64,10 @@ const Contact: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 mb-8">
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
             className="space-y-10"
           >
             <div>
@@ -106,9 +108,10 @@ const Contact: React.FC = () => {
 
           <div className="flex flex-col gap-8">
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
               className="bg-white dark:bg-slate-900 p-10 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-2xl relative"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-[2rem] pointer-events-none"></div>
@@ -176,9 +179,10 @@ const Contact: React.FC = () => {
         </div>
 
         <motion.div
-           initial={{ opacity: 0, y: 20 }}
+           initial={{ opacity: 0, y: 30 }}
            whileInView={{ opacity: 1, y: 0 }}
-           viewport={{ once: true }}
+           viewport={{ once: true, margin: "-50px" }}
+           transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
            className="flex flex-col items-center justify-center pt-4 pb-6 border-t border-slate-100 dark:border-slate-800/50"
         >
            <p className="text-sm font-medium text-slate-500 mb-4 uppercase tracking-wider">Connect with me</p>

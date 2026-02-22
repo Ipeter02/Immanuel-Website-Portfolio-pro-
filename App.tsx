@@ -14,21 +14,25 @@ import Preloader from './components/ui/Preloader';
 import ScrollToTop from './components/ui/ScrollToTop';
 import { useStore } from './lib/store';
 
+import SecurityWrapper from './components/ui/SecurityWrapper';
+
 const PublicPortfolio = ({ isDark, toggleTheme }: { isDark: boolean, toggleTheme: () => void }) => {
   return (
-    <div className="min-h-screen text-base antialiased bg-cream dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300">
-      <Navbar isDark={isDark} toggleTheme={toggleTheme} />
-      <main>
-        <Hero />
-        <About />
-        <Skills />
-        <Services />
-        <Portfolio />
-        <Contact />
-      </main>
-      <Footer />
-      <ScrollToTop />
-    </div>
+    <SecurityWrapper>
+      <div className="min-h-screen text-base antialiased bg-cream dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300">
+        <Navbar isDark={isDark} toggleTheme={toggleTheme} />
+        <main>
+          <Hero />
+          <About />
+          <Skills />
+          <Services />
+          <Portfolio />
+          <Contact />
+        </main>
+        <Footer />
+        <ScrollToTop />
+      </div>
+    </SecurityWrapper>
   );
 };
 

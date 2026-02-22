@@ -158,6 +158,7 @@ app.post('/api/contact', async (req, res) => {
       const mailOptions = {
         from: process.env.SMTP_USER, // sender address
         to: process.env.ADMIN_EMAIL || process.env.SMTP_USER, // list of receivers
+        replyTo: newMessage.email, // Allows you to reply directly to the user
         subject: `New Contact Message from ${newMessage.name}`, // Subject line
         text: `Name: ${newMessage.name}\nEmail: ${newMessage.email}\nMessage: ${newMessage.message}`, // plain text body
         html: `<p><strong>Name:</strong> ${newMessage.name}</p><p><strong>Email:</strong> ${newMessage.email}</p><p><strong>Message:</strong> ${newMessage.message}</p>`, // html body

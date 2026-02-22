@@ -39,12 +39,13 @@ const Services: React.FC = () => {
   };
 
   return (
-    <section id="services" className="py-16 md:py-24 bg-cream dark:bg-slate-900 transition-colors duration-300 relative" aria-label="Services">
+    <section id="services" className="py-12 md:py-16 bg-cream dark:bg-slate-900 transition-colors duration-300 relative" aria-label="Services">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
          <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center mb-12"
         >
           <span className="text-primary font-semibold tracking-wider uppercase text-sm">What I Offer</span>
@@ -58,10 +59,10 @@ const Services: React.FC = () => {
             return (
               <motion.div
                 key={service.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.15 }}
                 whileHover="hover"
                 className="group bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full active:scale-[0.98]"
               >

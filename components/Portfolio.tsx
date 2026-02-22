@@ -34,13 +34,13 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       whileHover={{ y: -10, transition: { duration: 0.3 } }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.15 }}
       className="group relative bg-cream dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-primary/50 dark:hover:border-primary/50 shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-colors duration-300 flex flex-col h-full"
     >
       <div 
@@ -166,12 +166,13 @@ const Portfolio: React.FC = () => {
   };
 
   return (
-    <section id="portfolio" className="py-16 md:py-24 bg-white dark:bg-slate-950 transition-colors duration-300 relative" aria-label="Portfolio Projects">
+    <section id="portfolio" className="py-12 md:py-16 bg-white dark:bg-slate-950 transition-colors duration-300 relative" aria-label="Portfolio Projects">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center mb-12"
         >
           <span className="text-primary font-semibold tracking-wider uppercase text-sm">My Projects</span>

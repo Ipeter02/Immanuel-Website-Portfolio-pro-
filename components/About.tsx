@@ -46,13 +46,14 @@ const About: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="py-16 md:py-24 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
+    <section id="about" className="py-12 md:py-16 bg-white dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center mb-12"
         >
           <span className="text-primary font-semibold tracking-wider uppercase text-sm">Know Me Better</span>
@@ -64,9 +65,10 @@ const About: React.FC = () => {
           
           {/* Main Content */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
             className="md:col-span-12 lg:col-span-7 space-y-8"
           >
             <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight text-center md:text-left">
@@ -108,9 +110,10 @@ const About: React.FC = () => {
 
           {/* Stats / Visual Side */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
             className="md:col-span-12 lg:col-span-5 flex flex-col gap-6 lg:pt-8"
           >
              <motion.div 

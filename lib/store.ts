@@ -147,7 +147,7 @@ const defaultProjects: Project[] = [
 ];
 
 const defaultSettings: AppSettings = {
-  email: 'contact@immanuelgondwe.com',
+  email: 'immanuelgondwe52@gmail.com',
   adminProfileImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
   resumeUrl: "",
   location: "Northern region mzuzu malawi",
