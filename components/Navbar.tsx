@@ -135,7 +135,6 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, toggleTheme }) => {
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-all duration-300 border border-primary/10 group-hover:border-primary/30 group-hover:shadow-md group-hover:shadow-primary/10">
                    <span className="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary group-hover:scale-110 transition-transform duration-300">IG</span>
                 </div>
-                <span className="text-xl font-bold text-slate-900 dark:text-white hidden sm:block opacity-0 sm:opacity-100 transition-opacity -ml-1">Immanuel.</span>
               </a>
             </div>
             

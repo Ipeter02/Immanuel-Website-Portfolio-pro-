@@ -458,8 +458,8 @@ export const useStore = () => {
   const updateService = (service: Service) => saveData({ ...globalData, services: globalData.services.map(s => s.id === service.id ? service : s) });
   const deleteService = (id: string) => saveData({ ...globalData, services: globalData.services.filter(s => s.id !== id) });
   
-  const markMessageRead = (id: string) => saveData({ ...globalData, messages: globalData.messages.map(m => m.id === id ? { ...m, read: true } : m) });
-  const deleteMessage = (id: string) => saveData({ ...globalData, messages: globalData.messages.filter(m => m.id !== id) });
+  const markMessageRead = (id: string) => saveData({ ...globalData, messages: globalData.messages.map(m => String(m.id) === String(id) ? { ...m, read: true } : m) });
+  const deleteMessage = (id: string) => saveData({ ...globalData, messages: globalData.messages.filter(m => String(m.id) !== String(id)) });
   
   const updateSettings = (settings: AppSettings) => saveData({ ...globalData, settings });
   const resetData = () => { if (window.confirm("Reset all data?")) saveData(initialData); };

@@ -1478,6 +1478,7 @@ const MessagesViewer: React.FC = () => {
     const { data, markMessageRead, deleteMessage, replyToMessage } = useStore();
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [viewingMessage, setViewingMessage] = useState<Message | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [replySubject, setReplySubject] = useState('');
     const [replyBody, setReplyBody] = useState('');
     const [sending, setSending] = useState(false);
@@ -1496,10 +1497,16 @@ const MessagesViewer: React.FC = () => {
         }
     };
 
-    const handleDelete = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this message?')) {
-            deleteMessage(id);
-            if (viewingMessage?.id === id) setViewingMessage(null);
+    const handleDeleteClick = (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setDeleteConfirmId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteConfirmId) {
+            deleteMessage(deleteConfirmId);
+            if (viewingMessage?.id === deleteConfirmId) setViewingMessage(null);
+            setDeleteConfirmId(null);
         }
     };
 
@@ -1547,7 +1554,7 @@ const MessagesViewer: React.FC = () => {
                                     <Check size={14} /> Mark Read
                                 </button>
                             )}
-                            <button onClick={() => handleDelete(msg.id)} className="text-xs font-bold text-red-500 flex items-center gap-1 hover:underline">
+                            <button onClick={(e) => handleDeleteClick(msg.id, e)} className="text-xs font-bold text-red-500 flex items-center gap-1 hover:underline">
                                 <Trash2 size={14} /> Delete
                             </button>
                         </div>
@@ -1580,12 +1587,29 @@ const MessagesViewer: React.FC = () => {
                         </div>
 
                         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                            <Button variant="ghost" onClick={() => handleDelete(viewingMessage.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                            <Button variant="ghost" onClick={() => handleDeleteClick(viewingMessage.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
                                 <Trash2 size={18} className="mr-2" /> Delete
                             </Button>
                             <Button onClick={() => handleReplyClick(viewingMessage)}>
                                 <Mail size={18} className="mr-2" /> Reply
                             </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmId && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95 text-center">
+                        <div className="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Message?</h3>
+                        <p className="text-slate-500 text-sm mb-6">Are you sure you want to delete this message? This action cannot be undone.</p>
+                        <div className="flex gap-3 justify-center">
+                            <Button variant="ghost" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+                            <Button onClick={confirmDelete} className="bg-red-500 hover:bg-red-600 shadow-red-500/30">Delete</Button>
                         </div>
                     </div>
                 </div>
