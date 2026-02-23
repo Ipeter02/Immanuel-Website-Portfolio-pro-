@@ -51,12 +51,47 @@ const SecurityWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
     document.addEventListener('dragstart', handleDragStart);
     document.addEventListener('selectstart', handleSelectStart);
 
+    // Anti-DevTools Tricks
+    
+    // 1. Debugger trap - pauses execution if DevTools is open
+    const debuggerInterval = setInterval(() => {
+      const before = new Date().getTime();
+      // eslint-disable-next-line no-debugger
+      debugger;
+      const after = new Date().getTime();
+      if (after - before > 100) {
+        // DevTools is likely open, we could redirect or clear body
+        // document.body.innerHTML = "DevTools is not allowed.";
+      }
+    }, 1000);
+
+    // 2. Clear console and override it
+    if (process.env.NODE_ENV === 'production') {
+      console.clear();
+      const noop = () => {};
+      console.log = noop;
+      console.warn = noop;
+      console.error = noop;
+      console.info = noop;
+      
+      // Print a warning
+      setTimeout(() => {
+        // Restore temporarily to print warning
+        const originalLog = Object.getPrototypeOf(console).log;
+        if (originalLog) {
+          originalLog.call(console, "%cStop!", "color: red; font-size: 50px; font-weight: bold; text-shadow: 2px 2px 0 #000;");
+          originalLog.call(console, "%cThis is a browser feature intended for developers. If someone told you to copy-paste something here to enable a feature or 'hack' someone's account, it is a scam and will give them access to your account.", "font-size: 16px;");
+        }
+      }, 100);
+    }
+
     // Cleanup
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('dragstart', handleDragStart);
       document.removeEventListener('selectstart', handleSelectStart);
+      clearInterval(debuggerInterval);
     };
   }, []);
 
