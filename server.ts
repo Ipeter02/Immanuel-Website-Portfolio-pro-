@@ -41,7 +41,7 @@ const PortfolioSchema = new mongoose.Schema({
 
 const PortfolioModel = mongoose.model('Portfolio', PortfolioSchema);
 
-if (process.env.MONGO_URI) {
+if (process.env.MONGO_URI && !process.env.MONGO_URI.includes('cluster0.abcde.mongodb.net')) {
   mongoose.connect(process.env.MONGO_URI)
     .then(() => {
       isMongoConnected = true;
@@ -52,7 +52,7 @@ if (process.env.MONGO_URI) {
       console.log('⚠️ Falling back to local file storage (db.json)');
     });
 } else {
-  console.log('⚠️ No MONGO_URI found in .env. Falling back to local file storage (db.json).');
+  console.log('⚠️ No valid MONGO_URI found in .env. Falling back to local file storage (db.json).');
 }
 
 // --- Multer Storage ---

@@ -41,39 +41,7 @@ const SecurityWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     // --- Advanced Anti-DevTools Tricks ---
     
-    const triggerViolation = () => {
-      document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;width:100vw;background:#0a0a0a;color:#ef4444;font-family:monospace;text-align:center;padding:20px;box-sizing:border-box;">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:20px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          <h1 style="font-size:32px;margin:0 0 10px 0;letter-spacing:2px;">SECURITY VIOLATION</h1>
-          <p style="font-size:16px;color:#a3a3a3;max-width:400px;line-height:1.5;">Developer tools, inspection, and scraping are strictly prohibited on this website.</p>
-          <p style="font-size:14px;color:#525252;margin-top:20px;">Please close DevTools and refresh the page.</p>
-        </div>
-      `;
-    };
-
-    // 5. Advanced Debugger Trap (Obfuscated)
-    // Using a self-invoking function and Function constructor to hide the debugger keyword from simple static analysis
-    const debuggerInterval = setInterval(() => {
-      const start = performance.now();
-      
-      // Obfuscated debugger call
-      (function() {
-        return function() {
-          // eslint-disable-next-line no-eval
-          eval("debugger");
-        }
-      })()();
-      
-      const end = performance.now();
-      
-      // If execution took longer than 100ms, debugger paused the thread
-      if (end - start > 100) {
-        triggerViolation();
-      }
-    }, 1000); // Increased interval to reduce performance impact and false positives
-
-    // 6. Aggressive Console Clearing & Override
+    // 5. Aggressive Console Clearing & Override
     const consoleInterval = setInterval(() => {
       console.clear();
     }, 50);
@@ -92,7 +60,6 @@ const SecurityWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('dragstart', handleDragStart);
       document.removeEventListener('selectstart', handleSelectStart);
-      clearInterval(debuggerInterval);
       clearInterval(consoleInterval);
       
       // Restore console
