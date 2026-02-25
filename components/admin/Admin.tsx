@@ -68,32 +68,39 @@ const ICON_CATEGORIES: Record<string, string[]> = {
 
 // --- Auth Component ---
 const Admin: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
+  const { isAdmin, login, logout, setAdminState } = useStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
   const [error, setError] = useState('');
+  const [authChecking, setAuthChecking] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
       if (supabase) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (error) {
+                console.warn("Supabase session check failed (offline?):", error.message);
+            } else if (session) {
+                setAdminState(true, session.access_token);
+            }
+            setAuthChecking(false);
+        }).catch(err => {
+            console.warn("Supabase session check exception:", err);
             setAuthChecking(false);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
+            if (session) {
+                setAdminState(true, session.access_token);
+            } else {
+                setAdminState(false, '');
+            }
         });
 
         return () => subscription.unsubscribe();
       } else {
-        const localUser = sessionStorage.getItem('admin_user');
-        if (localUser) {
-            setUser(JSON.parse(localUser));
-        }
         setAuthChecking(false);
       }
   }, []);
@@ -104,25 +111,33 @@ const Admin: React.FC = () => {
     setError('');
     
     try {
+        let supabaseSuccess = false;
         if (supabase) {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-            if (error) throw error;
-        } else {
-            const storedPassword = localStorage.getItem('admin_local_password') || 'admin';
-            if (password === storedPassword) {
-                const fakeUser = { email: email || 'admin@local', id: 'local-admin' };
-                setUser(fakeUser);
-                sessionStorage.setItem('admin_user', JSON.stringify(fakeUser));
-            } else {
-                throw new Error('Invalid password.');
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+                if (!error && data.session) {
+                    supabaseSuccess = true;
+                    setAdminState(true, data.session.access_token);
+                } else if (error) {
+                    console.warn("Supabase login failed, attempting fallback:", error.message);
+                }
+            } catch (e) {
+                console.warn("Supabase login exception, attempting fallback:", e);
+            }
+        }
+        
+        if (!supabaseSuccess) {
+            const success = await login(password);
+            if (!success) {
+                throw new Error(supabase ? 'Invalid email/password, or Supabase is offline and fallback password failed.' : 'Invalid password.');
             }
         }
     } catch (err: any) {
         console.error(err);
-        setError(supabase ? 'Invalid email or password.' : err.message);
+        setError(err.message);
     } finally {
         setLoading(false);
     }
@@ -131,10 +146,8 @@ const Admin: React.FC = () => {
   const handleLogout = async () => {
       if (supabase) {
           await supabase.auth.signOut();
-      } else {
-          sessionStorage.removeItem('admin_user');
-          setUser(null);
       }
+      logout();
   };
 
   if (authChecking) {
@@ -145,11 +158,7 @@ const Admin: React.FC = () => {
       );
   }
 
-  if (!user) {
-    const env = (import.meta as any).env || {};
-    const hasUrl = !!env.VITE_SUPABASE_URL;
-    const hasKey = !!env.VITE_SUPABASE_ANON_KEY;
-
+  if (!isAdmin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white font-sans relative overflow-hidden py-10">
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none opacity-50"></div>
@@ -213,28 +222,6 @@ const Admin: React.FC = () => {
                   </button>
               </div>
             </form>
-            
-            {!supabase && (
-                <div className="mt-8 p-4 rounded-xl bg-slate-900/50 border border-red-500/30 backdrop-blur-sm">
-                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <AlertTriangle size={14} /> Connection Debugger
-                    </h4>
-                    <div className="space-y-2 text-xs">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                            <span className="text-slate-400">VITE_SUPABASE_URL</span>
-                            <span className={`font-mono ${hasUrl ? "text-green-500" : "text-red-500 font-bold"}`}>
-                                {hasUrl ? "Found" : "Missing"}
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                            <span className="text-slate-400">VITE_SUPABASE_ANON_KEY</span>
-                            <span className={`font-mono ${hasKey ? "text-green-500" : "text-red-500 font-bold"}`}>
-                                {hasKey ? "Found" : "Missing"}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
       </div>
     );

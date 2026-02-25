@@ -88,7 +88,7 @@ const Hero: React.FC = () => {
   const downloadAttr = data.settings.resumeUrl ? "Immanuel_Gondwe_Resume.pdf" : undefined;
 
   return (
-    <section id="home" className="min-h-[85dvh] flex items-center justify-center relative overflow-hidden py-20 lg:py-0" aria-label="Introduction">
+    <section id="home" className="min-h-[85dvh] flex items-center justify-center relative overflow-hidden pt-32 pb-20 lg:pt-32 lg:pb-28" aria-label="Introduction">
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-slate-900">
         <AnimatePresence mode="popLayout">
             <motion.img
@@ -109,12 +109,12 @@ const Hero: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full z-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           
-          <div className="text-center lg:text-left order-2 lg:order-1">
+          <div className="text-center lg:text-left order-2 lg:order-1 lg:-mt-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary dark:text-primary text-xs sm:text-sm font-medium mb-6 backdrop-blur-sm shadow-sm"
+              className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary dark:text-primary text-xs sm:text-sm font-medium mb-8 lg:mb-10 backdrop-blur-sm shadow-sm"
             >
               <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
               Available for work
@@ -127,7 +127,7 @@ const Hero: React.FC = () => {
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-[1.1]"
             >
               {data.hero.headline.split('Immanuel Gondwe')[0]} <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-500 to-secondary relative whitespace-nowrap">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-500 to-secondary relative whitespace-nowrap inline-block mt-2">
                 Immanuel Gondwe
                 <span className="absolute inset-0 bg-gradient-to-r from-primary via-blue-500 to-secondary blur-2xl opacity-20 -z-10" aria-hidden="true"></span>
               </span>
@@ -186,7 +186,7 @@ const Hero: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ duration: 0.7 }}
-            className="relative order-1 lg:order-2 flex justify-center lg:justify-end [perspective:1000px] mt-8 lg:mt-0"
+            className="relative order-1 lg:order-2 flex justify-center lg:justify-end [perspective:1000px] mt-8 lg:mt-0 lg:-mt-32"
           >
              <motion.div 
                 className="relative w-[280px] h-[280px] sm:w-[350px] sm:h-[350px] lg:w-[450px] lg:h-[450px]"

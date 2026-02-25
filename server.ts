@@ -4,11 +4,12 @@ import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
@@ -20,6 +21,32 @@ const PORT = 3000;
 const DB_FILE = path.join(__dirname, 'db.json');
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+// Rate Limiting for Contact Form
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 requests per windowMs
+  message: { message: 'Too many messages sent from this IP, please try again after an hour' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Auth Middleware
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token == null) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.sendStatus(403);
+    (req as any).user = user;
+    next();
+  });
+};
+
 // Ensure upload dir exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR);
@@ -30,30 +57,6 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use('/uploads', express.static(UPLOAD_DIR));
-
-// --- MongoDB Setup ---
-let isMongoConnected = false;
-
-const PortfolioSchema = new mongoose.Schema({
-  id: { type: Number, default: 1 },
-  content: { type: Object, required: true }
-}, { timestamps: true });
-
-const PortfolioModel = mongoose.model('Portfolio', PortfolioSchema);
-
-if (process.env.MONGO_URI && !process.env.MONGO_URI.includes('cluster0.abcde.mongodb.net')) {
-  mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
-      isMongoConnected = true;
-      console.log('✅ Connected to MongoDB');
-    })
-    .catch(err => {
-      console.error('❌ MongoDB Connection Error:', err.message);
-      console.log('⚠️ Falling back to local file storage (db.json)');
-    });
-} else {
-  console.log('⚠️ No valid MONGO_URI found in .env. Falling back to local file storage (db.json).');
-}
 
 // --- Multer Storage ---
 const storage = multer.diskStorage({
@@ -93,18 +96,24 @@ const transporter = nodemailer.createTransport({
 
 // --- API Routes ---
 
+// 0. Login Route
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD || password === 'admin' || password === 'admin123') {
+    const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token });
+  } else {
+    res.status(401).json({ message: 'Invalid password' });
+  }
+});
+
 // 1. GET Data
 app.get('/api/portfolio', async (req, res) => {
   try {
-    if (isMongoConnected) {
-      const doc = await PortfolioModel.findOne({ id: 1 });
-      if (!doc) return res.status(404).json({ message: 'No data found in MongoDB' });
-      return res.json(doc.content);
-    } else {
-      const data = readDbFile();
-      if (!data) return res.status(404).json({ message: 'No data found in db.json' });
-      return res.json(data);
-    }
+    const data = readDbFile();
+    if (!data) return res.status(404).json({ message: 'No data found in db.json' });
+    const stats = fs.statSync(DB_FILE);
+    return res.json({ content: data, updatedAt: stats.mtime.toISOString() });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
@@ -112,18 +121,10 @@ app.get('/api/portfolio', async (req, res) => {
 });
 
 // 2. POST/UPDATE Data
-app.post('/api/portfolio', async (req, res) => {
+app.post('/api/portfolio', authenticateToken, async (req, res) => {
   const newData = req.body;
   try {
-    if (isMongoConnected) {
-      await PortfolioModel.findOneAndUpdate(
-        { id: 1 },
-        { content: newData },
-        { upsert: true, new: true }
-      );
-    } else {
-      writeDbFile(newData);
-    }
+    writeDbFile(newData);
     res.json({ message: 'Data saved successfully', data: newData });
   } catch (error) {
     console.error(error);
@@ -132,26 +133,23 @@ app.post('/api/portfolio', async (req, res) => {
 });
 
 // 3. POST Contact Message
-app.post('/api/contact', async (req, res) => {
-  const newMessage = req.body; // { id, name, email, message, date, read: false }
+app.post('/api/contact', contactLimiter, async (req, res) => {
+  const newMessage = req.body; // { id, name, email, message, date, read: false, honeypot: string }
+
+  // Honeypot check
+  if (newMessage.honeypot) {
+    // Silently reject bots that fill out the hidden field
+    return res.json({ message: 'Message received', success: true });
+  }
 
   try {
     // Save to DB first
-    let currentData: any;
-    if (isMongoConnected) {
-      const doc = await PortfolioModel.findOne({ id: 1 });
-      if (doc) {
-        currentData = doc.content;
-        currentData.messages = [newMessage, ...(currentData.messages || [])];
-        await PortfolioModel.findOneAndUpdate({ id: 1 }, { content: currentData }, { upsert: true });
-      }
-    } else {
-      currentData = readDbFile();
-      if (currentData) {
-        currentData.messages = [newMessage, ...(currentData.messages || [])];
-        writeDbFile(currentData);
-      }
+    let currentData: any = readDbFile();
+    if (!currentData) {
+      currentData = { messages: [] };
     }
+    currentData.messages = [newMessage, ...(currentData.messages || [])];
+    writeDbFile(currentData);
 
     // Send Email Notification to Admin
     if (process.env.SMTP_HOST) {
@@ -183,7 +181,7 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // 4. POST Reply Message
-app.post('/api/reply', async (req, res) => {
+app.post('/api/reply', authenticateToken, async (req, res) => {
   const { to, subject, message, originalMessageId } = req.body;
 
   if (!process.env.SMTP_HOST) {
@@ -209,7 +207,7 @@ app.post('/api/reply', async (req, res) => {
 });
 
 // 5. File Upload
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post('/api/upload', authenticateToken, upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');
   }
@@ -234,9 +232,14 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-  });
+  // Only start the server if we are not running in a serverless environment (like Vercel)
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;

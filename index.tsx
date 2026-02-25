@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { HelmetProvider } from 'react-helmet-async';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -86,7 +87,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <HelmetProvider>
+        <App />
+      </HelmetProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

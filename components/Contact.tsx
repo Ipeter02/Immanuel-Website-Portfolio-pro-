@@ -6,7 +6,7 @@ import { useStore } from '../lib/store';
 
 const Contact: React.FC = () => {
   const { data, addMessage } = useStore();
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', message: '', honeypot: '' });
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [copied, setCopied] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -29,7 +29,7 @@ const Contact: React.FC = () => {
     setTimeout(() => {
         addMessage(formData);
         setStatus('success');
-        setFormData({ name: '', email: '', message: '' });
+        setFormData({ name: '', email: '', message: '', honeypot: '' });
         setTimeout(() => setStatus('idle'), 3000);
     }, 1000);
   };
@@ -117,6 +117,19 @@ const Contact: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-[2rem] pointer-events-none"></div>
 
               <form onSubmit={handleSubmit} className="space-y-7 relative z-10" noValidate>
+                {/* Honeypot Field - Hidden from real users */}
+                <div style={{ display: 'none' }} aria-hidden="true">
+                  <label htmlFor="honeypot">Leave this field blank</label>
+                  <input
+                    type="text"
+                    id="honeypot"
+                    name="honeypot"
+                    value={formData.honeypot}
+                    onChange={handleChange}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Your Name</label>
                   <input

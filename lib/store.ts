@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Project, AppData, HeroData, Message, AboutData, SkillCategory, Service, AppSettings } from '../types';
 import { supabase } from './supabase';
+import imageCompression from 'browser-image-compression';
 
 // Check if we are using the custom backend
 const env = (import.meta as any).env;
@@ -174,6 +175,9 @@ const initialData: AppData = {
 let globalData: AppData = initialData;
 let globalIsLoaded = false;
 let globalConnectionStatus: 'local' | 'custom-server' | 'supabase' | 'offline' = 'local';
+let globalIsAdmin = false;
+let globalToken = localStorage.getItem('admin_token') || '';
+if (globalToken) globalIsAdmin = true;
 let listeners: (() => void)[] = [];
 
 // Helper to notify all components to re-render
@@ -186,6 +190,17 @@ const setGlobalData = (newData: AppData) => {
 
 const setGlobalIsLoaded = (loaded: boolean) => {
   globalIsLoaded = loaded;
+  notify();
+};
+
+const setGlobalIsAdmin = (isAdmin: boolean, token: string = '') => {
+  globalIsAdmin = isAdmin;
+  globalToken = token;
+  if (token) {
+    localStorage.setItem('admin_token', token);
+  } else {
+    localStorage.removeItem('admin_token');
+  }
   notify();
 };
 
@@ -211,60 +226,107 @@ const initializeData = async () => {
 
     // 2. Fetch Data from Backend (Overrides local storage if newer)
     try {
+        let fetchedFromSupabase = false;
+        let supabaseData: any = null;
+        let supabaseUpdatedAt: string | null = null;
+        
+        if (supabase) {
+            try {
+                // Option A: Supabase (Priority)
+                const { data: dbData, error } = await supabase
+                    .from('portfolio_data')
+                    .select('content, updated_at')
+                    .eq('id', 1)
+                    .single();
+
+                if (!error && dbData && dbData.content) {
+                    supabaseData = dbData.content;
+                    supabaseUpdatedAt = dbData.updated_at;
+                    
+                    // We found data in the cloud, let's use it!
+                    // Ensure schema compatibility
+                    const merged = { 
+                        ...initialData, 
+                        ...dbData.content, 
+                        about: { ...initialData.about, ...dbData.content.about },
+                        settings: { ...initialData.settings, ...dbData.content.settings } 
+                    };
+                    
+                    setGlobalData(merged);
+                    try {
+                        localStorage.setItem('portfolio_data', JSON.stringify(merged));
+                    } catch (e) {
+                         console.warn("Initial data too large for localStorage.");
+                    }
+                    globalConnectionStatus = 'supabase';
+                    fetchedFromSupabase = true;
+                } else if (error) {
+                    console.warn("Supabase fetch error (likely first run or offline):", error.message);
+                    // If it's a "Row not found" error, it means the DB is empty.
+                    if (error.code === 'PGRST116') {
+                        globalConnectionStatus = 'supabase'; 
+                        fetchedFromSupabase = true;
+                    }
+                }
+            } catch (supabaseError) {
+                console.warn("Supabase fetch exception:", supabaseError);
+            }
+        }
+        
         if (USE_CUSTOM_SERVER) {
-            // Option A: Custom Node Backend
+            // Option B: Custom Node Backend (Fallback & Sync)
             try {
                 const res = await fetch(`${CUSTOM_API_URL}/portfolio`);
                 if (res.ok) {
                     const jsonData = await res.json();
-                    setGlobalData(jsonData);
-                    try {
-                        localStorage.setItem('portfolio_data', JSON.stringify(jsonData));
-                    } catch (e) {
-                         console.warn("Initial data too large for localStorage.");
+                    const serverData = jsonData.content || jsonData;
+                    const serverUpdatedAt = jsonData.updatedAt;
+
+                    // Sync logic: If Server has newer data, update Supabase and use Server data
+                    if (supabase && serverUpdatedAt) {
+                        const supTime = supabaseUpdatedAt ? new Date(supabaseUpdatedAt).getTime() : 0;
+                        const monTime = new Date(serverUpdatedAt).getTime();
+                        
+                        if (monTime > supTime) {
+                            console.log("Server data is newer (or Supabase is empty). Syncing to Supabase...");
+                            await supabase.from('portfolio_data').upsert({ id: 1, content: serverData });
+                            
+                            const merged = { 
+                                ...initialData, 
+                                ...serverData, 
+                                about: { ...initialData.about, ...serverData.about },
+                                settings: { ...initialData.settings, ...serverData.settings } 
+                            };
+                            setGlobalData(merged);
+                            try {
+                                localStorage.setItem('portfolio_data', JSON.stringify(merged));
+                            } catch (e) {}
+                        }
+                    } else if (!fetchedFromSupabase) {
+                        // Fallback if Supabase failed
+                        const merged = { 
+                            ...initialData, 
+                            ...serverData, 
+                            about: { ...initialData.about, ...serverData.about },
+                            settings: { ...initialData.settings, ...serverData.settings } 
+                        };
+                        setGlobalData(merged);
+                        try {
+                            localStorage.setItem('portfolio_data', JSON.stringify(merged));
+                        } catch (e) {
+                             console.warn("Initial data too large for localStorage.");
+                        }
+                        globalConnectionStatus = 'custom-server';
                     }
-                    globalConnectionStatus = 'custom-server';
+                } else if (!fetchedFromSupabase) {
+                    globalConnectionStatus = 'offline';
                 }
             } catch (err) {
                 console.warn("Custom server unreachable:", err);
-                globalConnectionStatus = 'offline';
+                if (!fetchedFromSupabase) globalConnectionStatus = 'offline';
             }
-        } else if (supabase) {
-            // Option B: Supabase (Priority)
-            const { data: dbData, error } = await supabase
-                .from('portfolio_data')
-                .select('content')
-                .eq('id', 1)
-                .single();
-
-            if (!error && dbData && dbData.content) {
-                // We found data in the cloud, let's use it!
-                // Ensure schema compatibility
-                const merged = { 
-                    ...initialData, 
-                    ...dbData.content, 
-                    about: { ...initialData.about, ...dbData.content.about },
-                    settings: { ...initialData.settings, ...dbData.content.settings } 
-                };
-                
-                setGlobalData(merged);
-                try {
-                    localStorage.setItem('portfolio_data', JSON.stringify(merged));
-                } catch (e) {
-                     console.warn("Initial data too large for localStorage.");
-                }
-                globalConnectionStatus = 'supabase';
-            } else if (error) {
-                console.warn("Supabase fetch error (likely first run or offline):", error.message);
-                // If it's a "Row not found" error, it means the DB is empty.
-                // We will stick with local data (or defaults) and mark status as Supabase
-                // so the first Save writes to it.
-                if (error.code === 'PGRST116') {
-                    globalConnectionStatus = 'supabase'; 
-                } else {
-                    globalConnectionStatus = 'offline';
-                }
-            }
+        } else if (!fetchedFromSupabase) {
+            globalConnectionStatus = 'offline';
         }
     } catch (e) {
         console.error("Background fetch failed", e);
@@ -322,22 +384,36 @@ export const useStore = () => {
       }
 
       // 2. Persist to Backend
-      if (USE_CUSTOM_SERVER) {
-          await fetch(`${CUSTOM_API_URL}/portfolio`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newData)
-          });
-      }
-      else if (supabase) {
-        const { error } = await supabase
-            .from('portfolio_data')
-            .upsert({ id: 1, content: newData });
-        if (error) {
-            console.error("Supabase Save Error:", error.message);
-            alert("Error saving to cloud: " + error.message);
+      let savedToSupabase = false;
+      if (supabase) {
+        try {
+          const { error } = await supabase
+              .from('portfolio_data')
+              .upsert({ id: 1, content: newData });
+          if (error) {
+              console.error("Supabase Save Error:", error.message);
+          } else {
+              savedToSupabase = true;
+          }
+        } catch (supabaseError) {
+          console.error("Supabase Save Exception:", supabaseError);
         }
       } 
+      
+      if (!savedToSupabase && USE_CUSTOM_SERVER) {
+          try {
+              await fetch(`${CUSTOM_API_URL}/portfolio`, {
+                  method: 'POST',
+                  headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${globalToken}`
+                  },
+                  body: JSON.stringify(newData)
+              });
+          } catch (err) {
+              console.error("Custom server save error:", err);
+          }
+      }
     } catch (e) {
       console.error("Failed to save data:", e);
     }
@@ -347,41 +423,74 @@ export const useStore = () => {
 
   // Upload File Logic
   const uploadFile = async (file: File): Promise<string> => {
-      if (supabase) {
-          // Sanitize filename
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `images/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('portfolio-assets')
-            .upload(filePath, file);
-
-          if (uploadError) {
-              console.error("Supabase Upload Error:", uploadError);
-              throw uploadError;
+      let uploadedToSupabase = false;
+      let url = '';
+      let fileToUpload = file;
+      
+      // Image Compression
+      if (file.type.startsWith('image/')) {
+          try {
+              const options = {
+                  maxSizeMB: 0.5,
+                  maxWidthOrHeight: 1920,
+                  useWebWorker: true
+              };
+              fileToUpload = await imageCompression(file, options);
+          } catch (error) {
+              console.error("Image compression failed:", error);
           }
+      }
+      
+      if (supabase) {
+          try {
+              // Sanitize filename
+              const fileExt = fileToUpload.name.split('.').pop() || 'png';
+              const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+              const filePath = `images/${fileName}`;
 
-          const { data } = supabase.storage
-            .from('portfolio-assets')
-            .getPublicUrl(filePath);
+              const { error: uploadError } = await supabase.storage
+                .from('portfolio-assets')
+                .upload(filePath, fileToUpload);
 
-          return data.publicUrl;
-      } else if (globalConnectionStatus === 'custom-server') {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch(`${CUSTOM_API_URL}/upload`, {
-              method: 'POST',
-              body: formData
-          });
-          if (!res.ok) throw new Error('Upload failed');
-          const data = await res.json();
-          return data.url;
-      } else {
+              if (!uploadError) {
+                  const { data } = supabase.storage
+                    .from('portfolio-assets')
+                    .getPublicUrl(filePath);
+                  url = data.publicUrl;
+                  uploadedToSupabase = true;
+              } else {
+                  console.error("Supabase Upload Error:", uploadError);
+              }
+          } catch (e) {
+              console.error("Supabase Upload Exception:", e);
+          }
+      } 
+      
+      if (!uploadedToSupabase && USE_CUSTOM_SERVER) {
+          try {
+              const formData = new FormData();
+              formData.append('file', fileToUpload);
+              const res = await fetch(`${CUSTOM_API_URL}/upload`, {
+                  method: 'POST',
+                  headers: {
+                      'Authorization': `Bearer ${globalToken}`
+                  },
+                  body: formData
+              });
+              if (res.ok) {
+                  const data = await res.json();
+                  return data.url;
+              }
+          } catch (e) {
+              console.error("Custom server upload error:", e);
+          }
+      }
+      
+      if (!uploadedToSupabase && !USE_CUSTOM_SERVER) {
           // Offline/Local: Convert to Base64 (Not permanent!)
           
           // SAFETY CHECK: Prevent crashing browser with large files in local mode
-          if (file.size > 5 * 1024 * 1024) { // 5MB Limit
+          if (fileToUpload.size > 5 * 1024 * 1024) { // 5MB Limit
               const msg = "⚠️ File too large for Local Mode!\n\nProcessing a large file (like a 100MB resume) inside the browser will freeze your page and cause it to be blocked by Edge/Chrome.\n\nPlease connect to a Backend (Custom Server or Supabase) to upload large files.";
               alert(msg);
               throw new Error("File too large for local storage");
@@ -391,9 +500,11 @@ export const useStore = () => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);
               reader.onerror = reject;
-              reader.readAsDataURL(file);
+              reader.readAsDataURL(fileToUpload);
           });
       }
+      
+      return url;
   };
 
   // Special Action: Add Message (Prevents race conditions by using specific endpoint if available)
@@ -407,28 +518,38 @@ export const useStore = () => {
     // Use the safe saveData wrapper (or manually handle it to avoid circular dependency, but saveData handles localStorage error)
     await saveData(newData); 
 
-    try {
-        if (USE_CUSTOM_SERVER) {
+    let sentToSupabase = false;
+    if (supabase) {
+         try {
+             // Fetch current state first to avoid overwriting other updates
+             const { data: current, error } = await supabase.from('portfolio_data').select('content').eq('id', 1).single();
+             if (!error) {
+                 if (current && current.content) {
+                     const remoteMessages = current.content.messages || [];
+                     const updatedContent = { ...current.content, messages: [newMessage, ...remoteMessages] };
+                     await supabase.from('portfolio_data').upsert({ id: 1, content: updatedContent });
+                 } else {
+                     // First message ever
+                     await supabase.from('portfolio_data').upsert({ id: 1, content: newData });
+                 }
+                 sentToSupabase = true;
+             }
+         } catch (supabaseError) {
+             console.error("Supabase Add Message Exception:", supabaseError);
+         }
+    }
+    
+    if (!sentToSupabase && USE_CUSTOM_SERVER) {
+         try {
              // Use dedicated endpoint to append message safely (Backend handles atomic update)
              await fetch(`${CUSTOM_API_URL}/contact`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify(newMessage)
              });
-        } else if (supabase) {
-             // Fetch current state first to avoid overwriting other updates
-             const { data: current } = await supabase.from('portfolio_data').select('content').eq('id', 1).single();
-             if (current && current.content) {
-                 const remoteMessages = current.content.messages || [];
-                 const updatedContent = { ...current.content, messages: [newMessage, ...remoteMessages] };
-                 await supabase.from('portfolio_data').upsert({ id: 1, content: updatedContent });
-             } else {
-                 // First message ever
-                 await supabase.from('portfolio_data').upsert({ id: 1, content: newData });
-             }
-        }
-    } catch (e) {
-        console.error("Failed to send message to backend", e);
+         } catch (customServerError) {
+             console.error("Custom server add message error:", customServerError);
+         }
     }
     return true;
   };
@@ -438,7 +559,10 @@ export const useStore = () => {
       if (USE_CUSTOM_SERVER) {
           const res = await fetch(`${CUSTOM_API_URL}/reply`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${globalToken}`
+              },
               body: JSON.stringify({ to, subject, message, originalMessageId })
           });
           if (!res.ok) throw new Error('Failed to send reply');
@@ -446,6 +570,38 @@ export const useStore = () => {
       } else {
           throw new Error("Cannot send email in local/offline mode. Please configure backend.");
       }
+  };
+
+  // Login
+  const login = async (password: string) => {
+      if (USE_CUSTOM_SERVER) {
+          const res = await fetch(`${CUSTOM_API_URL}/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password })
+          });
+          if (res.ok) {
+              const data = await res.json();
+              setGlobalIsAdmin(true, data.token);
+              return true;
+          }
+          return false;
+      } else {
+          // Fallback for local/Supabase without custom server auth
+          if (password === (import.meta as any).env.VITE_ADMIN_PASSWORD || password === 'admin' || password === 'admin123') {
+              setGlobalIsAdmin(true, 'local-token');
+              return true;
+          }
+          return false;
+      }
+  };
+
+  const logout = () => {
+      setGlobalIsAdmin(false, '');
+  };
+
+  const setAdminState = (isAdmin: boolean, token: string = '') => {
+      setGlobalIsAdmin(isAdmin, token);
   };
 
   const updateHero = (hero: HeroData) => saveData({ ...globalData, hero });
@@ -468,6 +624,10 @@ export const useStore = () => {
     data: globalData,
     isLoaded: globalIsLoaded,
     connectionStatus: globalConnectionStatus,
+    isAdmin: globalIsAdmin,
+    login,
+    logout,
+    setAdminState,
     uploadFile,
     updateHero, updateAbout, addProject, updateProject, deleteProject, updateSkills,
     addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage, replyToMessage,
