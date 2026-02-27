@@ -427,12 +427,12 @@ export const useStore = () => {
       let url = '';
       let fileToUpload = file;
       
-      // Image Compression
+      // Image Compression (Skip for PDFs/Resumes)
       if (file.type.startsWith('image/')) {
           try {
               const options = {
-                  maxSizeMB: 0.5,
-                  maxWidthOrHeight: 1920,
+                  maxSizeMB: 5, // Increased from 0.5MB to 5MB
+                  maxWidthOrHeight: 3840, // Increased from 1920px to 4K
                   useWebWorker: true
               };
               fileToUpload = await imageCompression(file, options);
