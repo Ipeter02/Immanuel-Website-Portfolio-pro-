@@ -170,7 +170,7 @@ const Hero: React.FC = () => {
                 size="lg" 
                 href={resumeLink}
                 download={downloadAttr}
-                external={!data.settings.resumeUrl} 
+                external={true} 
                 className="group relative overflow-hidden border-2 border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary hover:bg-transparent dark:hover:bg-transparent transition-all duration-300 w-full sm:w-auto justify-center"
               >
                 <div className="absolute inset-0 bg-primary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />

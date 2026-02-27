@@ -530,9 +530,9 @@ const HeroEditor: React.FC = () => {
         try {
             const url = await uploadFile(file);
             setLocalData({ ...localData, profileImage: url });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Upload failed");
+            alert(`Upload failed: ${e.message}`);
         } finally {
             setUploading(false);
         }
@@ -551,9 +551,9 @@ const HeroEditor: React.FC = () => {
         try {
             const url = await uploadFile(file);
             setLocalData({ ...localData, backgroundImages: [...localData.backgroundImages, url] });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Upload failed");
+            alert(`Upload failed: ${e.message}`);
         } finally {
             setUploading(false);
         }
@@ -676,9 +676,9 @@ const AboutEditor: React.FC = () => {
         try {
             const url = await uploadFile(file);
             setLocalData({ ...localData, imageUrl: url });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Upload failed");
+            alert(`Upload failed: ${e.message}`);
         } finally {
             setUploading(false);
         }
@@ -1248,9 +1248,9 @@ const ProjectsEditor: React.FC = () => {
         try {
             const url = await uploadFile(file);
             setEditForm({ ...editForm, images: [...editForm.images, url] });
-        } catch (err) {
+        } catch (err: any) {
             console.error("Upload error", err);
-            alert("Failed to upload image");
+            alert(`Failed to upload image: ${err.message}`);
         } finally {
             setUploading(false);
         }
@@ -1668,9 +1668,9 @@ const SettingsEditor: React.FC = () => {
         try {
             const url = await uploadFile(file);
             setLocal({ ...local, adminProfileImage: url });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Upload failed");
+            alert(`Upload failed: ${e.message}`);
         } finally {
             setUploading(false);
         }
@@ -1688,9 +1688,9 @@ const SettingsEditor: React.FC = () => {
             const url = await uploadFile(file);
             setLocal({ ...local, resumeUrl: url });
             alert("Resume uploaded successfully!");
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Resume upload failed.");
+            alert(`Resume upload failed: ${e.message}`);
         } finally {
             setUploading(false);
         }

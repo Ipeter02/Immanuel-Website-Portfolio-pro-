@@ -446,7 +446,9 @@ export const useStore = () => {
               // Sanitize filename
               const fileExt = fileToUpload.name.split('.').pop() || 'png';
               const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-              const filePath = `images/${fileName}`;
+              // Use 'resumes' folder for PDFs, 'images' for others
+              const folder = file.type === 'application/pdf' ? 'resumes' : 'images';
+              const filePath = `${folder}/${fileName}`;
 
               const { error: uploadError } = await supabase.storage
                 .from('portfolio-assets')
@@ -458,11 +460,14 @@ export const useStore = () => {
                     .getPublicUrl(filePath);
                   url = data.publicUrl;
                   uploadedToSupabase = true;
+                  return url; // Return immediately on success
               } else {
                   console.error("Supabase Upload Error:", uploadError);
+                  throw new Error(`Supabase Upload Failed: ${uploadError.message}`);
               }
           } catch (e) {
               console.error("Supabase Upload Exception:", e);
+              throw e; // Re-throw to prevent silent fallback to broken custom server
           }
       } 
       
