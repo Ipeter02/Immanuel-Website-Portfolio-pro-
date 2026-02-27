@@ -452,7 +452,7 @@ export const useStore = () => {
 
               const { error: uploadError } = await supabase.storage
                 .from('portfolio-assets')
-                .upload(filePath, fileToUpload);
+                .upload(filePath, fileToUpload, { upsert: true });
 
               if (!uploadError) {
                   const { data } = supabase.storage
