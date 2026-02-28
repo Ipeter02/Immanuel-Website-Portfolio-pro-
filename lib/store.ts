@@ -611,13 +611,20 @@ export const useStore = () => {
     if (USE_CUSTOM_SERVER) {
          try {
              // Use dedicated endpoint to append message safely (Backend handles atomic update)
-             await fetch(`${CUSTOM_API_URL}/contact`, {
+             const res = await fetch(`${CUSTOM_API_URL}/contact`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify(newMessage)
              });
+             
+             if (!res.ok) {
+                 const errData = await res.json();
+                 throw new Error(errData.error || errData.message || "Server failed to send email");
+             }
          } catch (customServerError) {
              console.error("Custom server add message error:", customServerError);
+             // Re-throw so the UI knows it failed
+             throw customServerError;
          }
     }
     return true;

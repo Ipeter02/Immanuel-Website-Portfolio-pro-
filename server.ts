@@ -27,7 +27,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 // Rate Limiting for Contact Form
 const contactLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 requests per windowMs
+  max: 20, // Increased limit for testing
   message: { message: 'Too many messages sent from this IP, please try again after an hour' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -181,20 +181,43 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
         html: `<p><strong>Name:</strong> ${newMessage.name}</p><p><strong>Email:</strong> ${newMessage.email}</p><p><strong>Message:</strong> ${newMessage.message}</p>`, // html body
       };
 
-      // Use await to ensure email is sent before responding
-      await transporter.sendMail(mailOptions);
-      console.log('Email sent successfully');
+      try {
+          // Use await to ensure email is sent before responding
+          await transporter.sendMail(mailOptions);
+          console.log('Email sent successfully');
+      } catch (emailError: any) {
+          console.error("Failed to send email:", emailError);
+          return res.status(500).json({ 
+              message: 'Failed to send email notification', 
+              success: false, 
+              error: emailError.message || String(emailError) 
+          });
+      }
     } else {
       console.log("SMTP not configured, skipping email notification.");
+      return res.status(500).json({ 
+          message: 'SMTP Configuration Missing on Server', 
+          success: false,
+          error: 'SMTP_HOST not defined in environment variables'
+      });
     }
 
-    res.json({ message: 'Message received', success: true });
+    res.json({ message: 'Message received and email sent', success: true, emailSent: true });
   } catch (error) {
     console.error("Contact API Error:", error);
-    // Even if email fails, we might want to return success to the user if we saved it somewhere,
-    // but here email is the primary delivery method on Vercel.
     res.status(500).json({ message: 'Error processing message', error: String(error) });
   }
+});
+
+// Debug Route to check SMTP Config
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: 'online',
+        smtpConfigured: !!process.env.SMTP_HOST,
+        smtpUser: process.env.SMTP_USER,
+        smtpPort: process.env.SMTP_PORT,
+        vercel: !!process.env.VERCEL
+    });
 });
 
 // 4. POST Reply Message
