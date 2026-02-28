@@ -85,21 +85,51 @@ const writeDbFile = (data: any) => {
 };
 
 // --- Email Transporter ---
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  // Improved timeouts for Vercel
-  connectionTimeout: 5000, // 5 seconds
-  greetingTimeout: 5000,
-  socketTimeout: 10000,
-  logger: true, // Log to console for debugging
-  debug: true   // Include debug info
-});
+// Robust Configuration Logic
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+// Auto-detect secure mode: true for 465, false for 587 or others
+const secureMode = smtpPort === 465;
+
+let transporter: nodemailer.Transporter | null = null;
+
+if (smtpHost && smtpUser && smtpPass) {
+    console.log(`Configuring SMTP: ${smtpHost}:${smtpPort} (Secure: ${secureMode})`);
+    transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: secureMode,
+        auth: {
+            user: smtpUser,
+            pass: smtpPass,
+        },
+        // Aggressive timeouts to prevent Vercel "Function Invocation Failed"
+        connectionTimeout: 5000, // 5 seconds
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
+        logger: true,
+        debug: true
+    });
+} else {
+    console.warn("⚠️ SMTP Configuration missing. Email features will be disabled.");
+}
+
+// Helper: Send Email with Timeout Protection
+const sendEmailSafe = async (mailOptions: any) => {
+    if (!transporter) throw new Error("SMTP not configured");
+
+    // Race between the email sending and a 6-second timeout
+    // Vercel Hobby functions time out at 10s, so we must fail before that.
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Email connection timed out (6s limit)")), 6000)
+    );
+
+    const sendPromise = transporter.sendMail(mailOptions);
+
+    return Promise.race([sendPromise, timeoutPromise]);
+};
 
 // --- API Routes ---
 
@@ -172,7 +202,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
     }
 
     // 2. Send Email Notification to Admin
-    if (process.env.SMTP_HOST) {
+    if (transporter) {
       const mailOptions = {
         from: process.env.SMTP_USER, // sender address
         to: process.env.ADMIN_EMAIL || process.env.SMTP_USER, // list of receivers
@@ -183,16 +213,11 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
       };
 
       try {
-          // Verify connection before sending
-          await transporter.verify();
-          console.log("SMTP Connection Verified");
-
-          // Send email
-          await transporter.sendMail(mailOptions);
+          // Use the safe sender with timeout
+          await sendEmailSafe(mailOptions);
           console.log('Email sent successfully');
       } catch (emailError: any) {
           console.error("Failed to send email:", emailError);
-          // Return detailed error for debugging
           return res.status(500).json({ 
               message: 'Failed to send email notification', 
               success: false, 
@@ -202,7 +227,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
       }
     } else {
       console.log("SMTP not configured, skipping email notification.");
-      return res.status(500).json({ 
+      return res.status(503).json({ 
           message: 'SMTP Configuration Missing on Server', 
           success: false,
           error: 'SMTP_HOST not defined in environment variables'
@@ -230,8 +255,8 @@ app.get('/api/status', (req, res) => {
 // Test Email Route
 app.get('/api/test-email', async (req, res) => {
     try {
-        if (!process.env.SMTP_HOST) {
-            throw new Error("SMTP_HOST not configured");
+        if (!transporter) {
+            throw new Error("SMTP not configured");
         }
 
         // 1. Verify Connection
@@ -266,8 +291,8 @@ app.get('/api/test-email', async (req, res) => {
 app.post('/api/reply', authenticateToken, async (req, res) => {
   const { to, subject, message, originalMessageId } = req.body;
 
-  if (!process.env.SMTP_HOST) {
-    return res.status(500).json({ message: 'SMTP not configured' });
+  if (!transporter) {
+    return res.status(503).json({ message: 'SMTP not configured' });
   }
 
   const mailOptions = {
@@ -279,12 +304,17 @@ app.post('/api/reply', authenticateToken, async (req, res) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    // Use safe sender with timeout
+    await sendEmailSafe(mailOptions);
     console.log(`Reply sent to ${to}`);
     res.json({ success: true, message: 'Reply sent successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending reply:", error);
-    res.status(500).json({ message: 'Failed to send reply' });
+    res.status(500).json({ 
+        message: 'Failed to send reply', 
+        error: error.message,
+        code: error.code 
+    });
   }
 });
 
