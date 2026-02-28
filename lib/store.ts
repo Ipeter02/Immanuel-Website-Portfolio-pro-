@@ -605,7 +605,10 @@ export const useStore = () => {
          }
     }
     
-    if (!sentToSupabase && USE_CUSTOM_SERVER) {
+    // ALWAYS call the custom server if enabled. 
+    // This is crucial because the server handles EMAIL NOTIFICATIONS.
+    // Even if we saved to Supabase, we need the server to send the email.
+    if (USE_CUSTOM_SERVER) {
          try {
              // Use dedicated endpoint to append message safely (Backend handles atomic update)
              await fetch(`${CUSTOM_API_URL}/contact`, {

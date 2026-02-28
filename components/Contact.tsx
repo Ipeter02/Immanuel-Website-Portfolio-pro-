@@ -18,7 +18,7 @@ const Contact: React.FC = () => {
     if (e.target.name === 'email' && emailError) setEmailError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail(formData.email)) {
       setEmailError('Please enter a valid email address');
@@ -26,12 +26,17 @@ const Contact: React.FC = () => {
     }
 
     setStatus('submitting');
-    setTimeout(() => {
-        addMessage(formData);
+    
+    try {
+        await addMessage(formData);
         setStatus('success');
         setFormData({ name: '', email: '', message: '', honeypot: '' });
         setTimeout(() => setStatus('idle'), 3000);
-    }, 1000);
+    } catch (error) {
+        console.error("Failed to send message:", error);
+        setStatus('idle');
+        alert("Failed to send message. Please try again.");
+    }
   };
 
   const contactEmail = data.settings?.email || 'contact@example.com';

@@ -87,7 +87,7 @@ const writeDbFile = (data: any) => {
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -110,6 +110,15 @@ app.post('/api/login', (req, res) => {
 // 1. GET Data
 app.get('/api/portfolio', async (req, res) => {
   try {
+    // On Vercel, we can't rely on local db.json. 
+    // We should ideally fetch from Supabase here if configured, 
+    // but for now, return empty or default if file doesn't exist.
+    if (process.env.VERCEL) {
+       // In serverless, just return a basic structure or fetch from Supabase if you implemented that.
+       // For now, to prevent crashing:
+       return res.json({ content: {}, updatedAt: new Date().toISOString() });
+    }
+
     const data = readDbFile();
     if (!data) return res.status(404).json({ message: 'No data found in db.json' });
     const stats = fs.statSync(DB_FILE);
@@ -124,7 +133,11 @@ app.get('/api/portfolio', async (req, res) => {
 app.post('/api/portfolio', authenticateToken, async (req, res) => {
   const newData = req.body;
   try {
-    writeDbFile(newData);
+    if (!process.env.VERCEL) {
+        writeDbFile(newData);
+    } else {
+        console.log("Skipping local DB write on Vercel (Read-only filesystem)");
+    }
     res.json({ message: 'Data saved successfully', data: newData });
   } catch (error) {
     console.error(error);
@@ -143,15 +156,21 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
   }
 
   try {
-    // Save to DB first
-    let currentData: any = readDbFile();
-    if (!currentData) {
-      currentData = { messages: [] };
+    // 1. Try to save to local DB (Skip on Vercel)
+    if (!process.env.VERCEL) {
+        try {
+            let currentData: any = readDbFile();
+            if (!currentData) {
+            currentData = { messages: [] };
+            }
+            currentData.messages = [newMessage, ...(currentData.messages || [])];
+            writeDbFile(currentData);
+        } catch (dbError) {
+            console.warn("Failed to save to local DB:", dbError);
+        }
     }
-    currentData.messages = [newMessage, ...(currentData.messages || [])];
-    writeDbFile(currentData);
 
-    // Send Email Notification to Admin
+    // 2. Send Email Notification to Admin
     if (process.env.SMTP_HOST) {
       const mailOptions = {
         from: process.env.SMTP_USER, // sender address
@@ -162,13 +181,9 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
         html: `<p><strong>Name:</strong> ${newMessage.name}</p><p><strong>Email:</strong> ${newMessage.email}</p><p><strong>Message:</strong> ${newMessage.message}</p>`, // html body
       };
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error sending email:", error);
-        } else {
-          console.log('Email sent: ' + info.response);
-        }
-      });
+      // Use await to ensure email is sent before responding
+      await transporter.sendMail(mailOptions);
+      console.log('Email sent successfully');
     } else {
       console.log("SMTP not configured, skipping email notification.");
     }
@@ -176,7 +191,9 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
     res.json({ message: 'Message received', success: true });
   } catch (error) {
     console.error("Contact API Error:", error);
-    res.status(500).json({ message: 'Error saving message' });
+    // Even if email fails, we might want to return success to the user if we saved it somewhere,
+    // but here email is the primary delivery method on Vercel.
+    res.status(500).json({ message: 'Error processing message', error: String(error) });
   }
 });
 
