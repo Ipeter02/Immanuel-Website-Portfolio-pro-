@@ -703,6 +703,25 @@ export const useStore = () => {
   const updateSettings = (settings: AppSettings) => saveData({ ...globalData, settings });
   const resetData = () => { if (window.confirm("Reset all data?")) saveData(initialData); };
 
+  // Manual Sync Trigger
+  const forceSync = async () => {
+      if (!supabase) {
+          alert("Supabase is not connected. Cannot sync.");
+          return;
+      }
+      try {
+          console.log("Force syncing local data to Supabase...");
+          const { error } = await supabase.from('portfolio_data').upsert({ id: 1, content: globalData });
+          if (error) throw error;
+          alert("Sync Successful! Local data has been pushed to the cloud.");
+          globalConnectionStatus = 'supabase';
+          notify();
+      } catch (e: any) {
+          console.error("Sync failed:", e);
+          alert(`Sync Failed: ${e.message}`);
+      }
+  };
+
   return {
     data: globalData,
     isLoaded: globalIsLoaded,
@@ -714,6 +733,6 @@ export const useStore = () => {
     uploadFile,
     updateHero, updateAbout, addProject, updateProject, deleteProject, updateSkills,
     addService, updateService, deleteService, addMessage, markMessageRead, deleteMessage, replyToMessage,
-    updateSettings, resetData
+    updateSettings, resetData, forceSync
   };
 };

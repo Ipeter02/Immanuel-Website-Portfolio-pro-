@@ -18,8 +18,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
-const DB_FILE = path.join(__dirname, 'db.json');
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+// Use /tmp for Vercel (read-only filesystem elsewhere), otherwise local uploads folder
+const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
+const DB_FILE = process.env.VERCEL ? path.join('/tmp', 'db.json') : path.join(__dirname, 'db.json');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
@@ -118,9 +119,10 @@ app.get('/api/portfolio', async (req, res) => {
     // We should ideally fetch from Supabase here if configured, 
     // but for now, return empty or default if file doesn't exist.
     if (process.env.VERCEL) {
-       // In serverless, just return a basic structure or fetch from Supabase if you implemented that.
-       // For now, to prevent crashing:
-       return res.json({ content: {}, updatedAt: new Date().toISOString() });
+       // In serverless, do NOT return a fresh timestamp with empty data.
+       // This causes the frontend to overwrite valid Supabase/Local data with empty data.
+       // Return 404 so the frontend knows to use Supabase or Local storage.
+       return res.status(404).json({ message: 'No server-side storage on Vercel (Use Supabase)' });
     }
 
     const data = readDbFile();

@@ -273,6 +273,9 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Warning for Vercel + Local Mode
+  const showSyncWarning = (connectionStatus === 'local' || connectionStatus === 'offline') && window.location.hostname.includes('vercel.app');
+
   const handleViewLive = () => {
       const baseUrl = window.location.href.split('#')[0];
       window.open(`${baseUrl}#/`, '_blank');
@@ -365,6 +368,12 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
       <div className="flex-1 lg:ml-[280px] flex flex-col h-screen">
          <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
+            {showSyncWarning && (
+                <div className="absolute top-20 left-0 right-0 bg-yellow-100 border-b border-yellow-200 text-yellow-800 px-8 py-3 text-sm flex items-center justify-center gap-2 z-30">
+                    <AlertTriangle size={16} />
+                    <span className="font-bold">Warning:</span> You are in Local Mode on Vercel. Changes will ONLY be saved to this browser and will NOT appear on other devices. Please connect Supabase for cross-device sync.
+                </div>
+            )}
             <div className="flex items-center gap-4">
                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-slate-100 rounded-lg"><Menu /></button>
                <div className="hidden md:flex items-center text-slate-400 text-sm">
@@ -1716,7 +1725,7 @@ const MessagesViewer: React.FC = () => {
 };
 
 const SettingsEditor: React.FC = () => {
-    const { data, updateSettings, uploadFile, resetData, connectionStatus } = useStore();
+    const { data, updateSettings, uploadFile, resetData, connectionStatus, forceSync } = useStore();
     const [local, setLocal] = useState(data.settings);
     const [uploading, setUploading] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
@@ -1724,6 +1733,15 @@ const SettingsEditor: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
     const [passwordMsg, setPasswordMsg] = useState('');
+    const [syncing, setSyncing] = useState(false);
+
+    const handleSync = async () => {
+        if (window.confirm("Force sync local data to Supabase? This will overwrite the cloud version with your local version.")) {
+            setSyncing(true);
+            await forceSync();
+            setSyncing(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLocal({ ...local, [e.target.name]: e.target.value });
@@ -1829,7 +1847,32 @@ const SettingsEditor: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-8 pb-12">
             <div className="flex justify-between items-center">
                  <h2 className="text-2xl font-bold text-slate-800">General Settings</h2>
-                 <SaveAction onSave={() => updateSettings(local)} />
+                 <div className="flex gap-2">
+                    <Button 
+                        onClick={handleSync} 
+                        disabled={syncing || connectionStatus !== 'supabase'}
+                        variant="outline"
+                        className={`border-blue-200 text-blue-600 hover:bg-blue-50 ${connectionStatus !== 'supabase' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        {syncing ? <Loader2 className="animate-spin mr-2" size={16} /> : <RefreshCw className="mr-2" size={16} />}
+                        Force Sync
+                    </Button>
+                    <SaveAction onSave={() => updateSettings(local)} />
+                 </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${connectionStatus === 'supabase' ? 'bg-green-500' : connectionStatus === 'custom-server' ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
+                    <div>
+                        <h4 className="font-bold text-slate-800 text-sm">Connection Status: <span className="uppercase">{connectionStatus}</span></h4>
+                        <p className="text-xs text-slate-500">
+                            {connectionStatus === 'supabase' ? 'Connected to Cloud Database. Changes sync automatically.' : 
+                             connectionStatus === 'local' ? 'Local Storage Only. Connect Supabase to sync across devices.' :
+                             'Using Custom Server API.'}
+                        </p>
+                    </div>
+                </div>
             </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6">
