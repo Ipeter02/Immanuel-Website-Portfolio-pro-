@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
              </span>
              
              <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium">
-                © {new Date().getFullYear()} Immanuel Gondwe. <span className="hidden sm:inline">All rights reserved.</span>
+                © {new Date().getFullYear()} Immanuel Gondwe. <span className="hidden sm:inline">All rights reserved.</span> v1.0.6
              </p>
 
              {/* Invisible Hit Area (Over & Below) for Trigger Logic */}
