@@ -409,7 +409,14 @@ const AdminLayout: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   {showNotifications && <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>}
                </div>
                <button onClick={() => setActiveTab('settings')}><Settings size={20} className="text-slate-500 hover:text-primary transition-colors cursor-pointer" /></button>
-               <img src={adminImage} alt="Profile" className="w-9 h-9 rounded-full object-cover border border-slate-200 cursor-pointer" />
+               <img 
+                   src={adminImage} 
+                   alt="Profile" 
+                   className="w-9 h-9 rounded-full object-cover border border-slate-200 cursor-pointer bg-slate-50" 
+                   onError={(e) => {
+                       e.currentTarget.src = "https://via.placeholder.com/150?text=User";
+                   }}
+               />
             </div>
          </header>
 
@@ -528,11 +535,20 @@ const HeroEditor: React.FC = () => {
         if (!file) return;
         setUploading(true);
         try {
+            // 1. Create a temporary local URL for immediate preview
+            const tempUrl = URL.createObjectURL(file);
+            setLocalData({ ...localData, profileImage: tempUrl });
+
+            // 2. Upload in background
             const url = await uploadFile(file);
-            setLocalData({ ...localData, profileImage: url });
+            
+            // 3. Update with permanent URL
+            setLocalData(prev => ({ ...prev, profileImage: url }));
         } catch (e: any) {
             console.error(e);
             alert(`Upload failed: ${e.message}`);
+            // Revert to placeholder if failed
+            setLocalData(prev => ({ ...prev, profileImage: "https://via.placeholder.com/150?text=Upload+Failed" }));
         } finally {
             setUploading(false);
         }
@@ -549,11 +565,23 @@ const HeroEditor: React.FC = () => {
 
         setUploading(true);
         try {
+            // 1. Immediate preview
+            const tempUrl = URL.createObjectURL(file);
+            setLocalData(prev => ({ ...prev, backgroundImages: [...prev.backgroundImages, tempUrl] }));
+
+            // 2. Upload
             const url = await uploadFile(file);
-            setLocalData({ ...localData, backgroundImages: [...localData.backgroundImages, url] });
+            
+            // 3. Replace temp URL with real URL
+            setLocalData(prev => ({ 
+                ...prev, 
+                backgroundImages: prev.backgroundImages.map(img => img === tempUrl ? url : img) 
+            }));
         } catch (e: any) {
             console.error(e);
             alert(`Upload failed: ${e.message}`);
+            // Remove the failed temp image
+            setLocalData(prev => ({ ...prev, backgroundImages: prev.backgroundImages.filter(img => !img.startsWith('blob:')) }));
         } finally {
             setUploading(false);
         }
@@ -593,7 +621,20 @@ const HeroEditor: React.FC = () => {
                      <label className="block text-sm font-bold text-slate-700 mb-2">Profile Image</label>
                      <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="relative group shrink-0">
-                           <img src={localData.profileImage} alt="Profile" className="w-24 h-24 object-cover rounded-full border-2 border-slate-100 shadow-sm" />
+                           <img 
+                               src={localData.profileImage} 
+                               alt="Profile" 
+                               className="w-24 h-24 object-cover rounded-full border-2 border-slate-100 shadow-sm bg-slate-50"
+                               onError={(e) => {
+                                   e.currentTarget.src = "https://via.placeholder.com/150?text=Image+Error";
+                                   e.currentTarget.title = "Image failed to load. Check URL or Bucket permissions.";
+                               }}
+                           />
+                           {uploading && (
+                               <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                   <Loader2 className="animate-spin text-white" size={20} />
+                               </div>
+                           )}
                         </div>
                         <div className="flex-1 w-full">
                            <input name="profileImage" value={localData.profileImage} onChange={handleChange} className="w-full p-3 rounded-lg border border-slate-200 focus:border-primary outline-none mb-3 text-sm font-mono text-slate-500" placeholder="Image URL" />
@@ -1246,11 +1287,23 @@ const ProjectsEditor: React.FC = () => {
 
         setUploading(true);
         try {
+            // 1. Immediate preview
+            const tempUrl = URL.createObjectURL(file);
+            setEditForm(prev => prev ? ({ ...prev, images: [...prev.images, tempUrl] }) : null);
+
+            // 2. Upload
             const url = await uploadFile(file);
-            setEditForm({ ...editForm, images: [...editForm.images, url] });
+            
+            // 3. Replace temp URL with real URL
+            setEditForm(prev => prev ? ({ 
+                ...prev, 
+                images: prev.images.map(img => img === tempUrl ? url : img) 
+            }) : null);
         } catch (err: any) {
             console.error("Upload error", err);
             alert(`Failed to upload image: ${err.message}`);
+            // Remove the failed temp image
+            setEditForm(prev => prev ? ({ ...prev, images: prev.images.filter(img => !img.startsWith('blob:')) }) : null);
         } finally {
             setUploading(false);
         }
@@ -1402,8 +1455,16 @@ const ProjectsEditor: React.FC = () => {
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
                             {editForm.images.map((img, idx) => (
-                                <div key={idx} className="relative aspect-square group rounded-lg overflow-hidden border border-slate-200">
-                                    <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                                <div key={idx} className="relative aspect-square group rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                                    <img 
+                                        src={img} 
+                                        alt="Preview" 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => {
+                                            e.currentTarget.src = "https://via.placeholder.com/150?text=Error";
+                                            e.currentTarget.title = "Image failed to load";
+                                        }}
+                                    />
                                     <button 
                                         onClick={() => removeImage(idx)}
                                         className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1443,7 +1504,14 @@ const ProjectsEditor: React.FC = () => {
                     {data.projects.map(project => (
                         <div key={project.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
                             <div className="h-40 bg-slate-100 relative">
-                                <img src={project.images[0] || "https://via.placeholder.com/400x300?text=No+Image"} alt={project.title} className="w-full h-full object-cover" />
+                                <img 
+                                    src={project.images[0] || "https://via.placeholder.com/400x300?text=No+Image"} 
+                                    alt={project.title} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => {
+                                        e.currentTarget.src = "https://via.placeholder.com/400x300?text=Image+Error";
+                                    }}
+                                />
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                     <button onClick={() => handleEdit(project)} className="p-2 bg-white rounded-full text-slate-800 hover:text-primary"><PenTool size={18} /></button>
                                     <button onClick={() => deleteProject(project.id)} className="p-2 bg-white rounded-full text-slate-800 hover:text-red-500"><Trash2 size={18} /></button>
@@ -1505,7 +1573,11 @@ const MessagesViewer: React.FC = () => {
             alert('Reply sent successfully!');
             setReplyingTo(null);
         } catch (error: any) {
-            alert('Failed to send reply: ' + error.message);
+            console.warn("Server reply failed, falling back to mailto:", error);
+            // Fallback: Open default email client
+            const mailtoLink = `mailto:${replyingTo.email}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`;
+            window.location.href = mailtoLink;
+            setReplyingTo(null);
         } finally {
             setSending(false);
         }

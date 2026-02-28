@@ -200,7 +200,13 @@ const Hero: React.FC = () => {
                    <img 
                       src={data.hero.profileImage} 
                       alt="Profile"
+                      loading="eager"
+                      // @ts-ignore
+                      fetchpriority="high"
                       className="absolute inset-0 w-full h-full object-cover object-top hover:scale-110 transition-transform duration-700"
+                      onError={(e) => {
+                          e.currentTarget.src = "https://via.placeholder.com/400x400?text=Profile+Image";
+                      }}
                    />
                 </div>
                 

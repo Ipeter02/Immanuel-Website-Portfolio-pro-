@@ -1,50 +1,60 @@
--- 1. Create the table to store all portfolio data (JSON based for flexibility)
-CREATE TABLE IF NOT EXISTS portfolio_data (
-  id BIGINT PRIMARY KEY,
-  content JSONB NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- 1. Create the main data table
+create table if not exists public.portfolio_data (
+  id bigint primary key,
+  content jsonb not null,
+  updated_at timestamptz default now()
 );
 
--- 2. Enable Row Level Security (Security best practice)
-ALTER TABLE portfolio_data ENABLE ROW LEVEL SECURITY;
+-- 2. Enable Row Level Security (RLS)
+alter table public.portfolio_data enable row level security;
 
--- 3. Create Policies for the Data
--- Allow everyone (public) to READ the portfolio data
-CREATE POLICY "Public Read Access" 
-ON portfolio_data FOR SELECT 
-USING (true);
+-- 3. Create Policies for Data Access
+-- Allow everyone to read the portfolio data
+create policy "Public Read Access" 
+on public.portfolio_data 
+for select 
+using (true);
 
--- Allow only authenticated users (You/Admin) to UPDATE/INSERT
-CREATE POLICY "Admin Write Access" 
-ON portfolio_data FOR ALL 
-USING (auth.role() = 'authenticated');
+-- Allow authenticated users (admin) to insert/update data
+create policy "Authenticated Insert Access" 
+on public.portfolio_data 
+for insert 
+with check (auth.role() = 'authenticated');
 
--- 4. Set up Storage for Images and Resumes
--- Create a new bucket called 'portfolio-assets'
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('portfolio-assets', 'portfolio-assets', true)
-ON CONFLICT (id) DO NOTHING;
+create policy "Authenticated Update Access" 
+on public.portfolio_data 
+for update 
+using (auth.role() = 'authenticated');
 
--- 5. Storage Policies
--- Allow public to view images
-CREATE POLICY "Public Access to Assets"
-ON storage.objects FOR SELECT
-USING ( bucket_id = 'portfolio-assets' );
+-- 4. Create Storage Bucket for Images/Resumes
+insert into storage.buckets (id, name, public) 
+values ('portfolio-assets', 'portfolio-assets', true)
+on conflict (id) do nothing;
 
--- Allow admin to upload/delete images
-CREATE POLICY "Admin Asset Management"
-ON storage.objects FOR ALL
-USING ( bucket_id = 'portfolio-assets' AND auth.role() = 'authenticated' );
+-- 5. Create Policies for Storage Access
+-- Allow everyone to view images/files
+create policy "Public Access" 
+on storage.objects 
+for select 
+using ( bucket_id = 'portfolio-assets' );
 
--- 6. (Optional) Create a trigger to update the 'updated_at' column automatically
-CREATE OR REPLACE FUNCTION update_modified_column() 
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW; 
-END;
-$$ language 'plpgsql';
+-- Allow authenticated users to upload/modify files
+create policy "Authenticated Upload" 
+on storage.objects 
+for insert 
+with check ( bucket_id = 'portfolio-assets' and auth.role() = 'authenticated' );
 
-CREATE TRIGGER update_portfolio_modtime 
-BEFORE UPDATE ON portfolio_data 
-FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+create policy "Authenticated Update" 
+on storage.objects 
+for update 
+using ( bucket_id = 'portfolio-assets' and auth.role() = 'authenticated' );
+
+create policy "Authenticated Delete" 
+on storage.objects 
+for delete 
+using ( bucket_id = 'portfolio-assets' and auth.role() = 'authenticated' );
+
+-- 6. Insert initial empty row if it doesn't exist (optional, app handles upsert)
+insert into public.portfolio_data (id, content)
+values (1, '{}'::jsonb)
+on conflict (id) do nothing;

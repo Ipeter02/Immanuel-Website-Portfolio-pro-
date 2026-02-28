@@ -93,4 +93,5 @@ export interface AppData {
   projects: Project[];
   messages: Message[];
   settings: AppSettings;
+  lastUpdated?: number; // Timestamp for sync logic
 }

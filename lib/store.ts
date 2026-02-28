@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Project, AppData, HeroData, Message, AboutData, SkillCategory, Service, AppSettings } from '../types';
 import { supabase } from './supabase';
 import imageCompression from 'browser-image-compression';
+import { saveFileLocally, saveAppDataLocally, getAppDataLocally } from './localDb';
 
 // Check if we are using the custom backend
 const env = (import.meta as any).env;
@@ -206,22 +207,38 @@ const setGlobalIsAdmin = (isAdmin: boolean, token: string = '') => {
 
 // --- INITIALIZATION LOGIC ---
 const initializeData = async () => {
-    // 1. Attempt to load from localStorage immediately for speed/offline support
+    // 1. Attempt to load from IndexedDB (Built-in Database) for robust offline support
+    let localDBData: AppData | undefined;
     try {
-        const localData = localStorage.getItem('portfolio_data');
-        if (localData) {
-            const parsed = JSON.parse(localData);
-            // Deep merge vital sections to ensure new fields (like about.cards) exist if they are missing in local storage
+        localDBData = await getAppDataLocally();
+        if (localDBData) {
+            // Deep merge vital sections
             const merged = { 
                 ...initialData, 
-                ...parsed, 
-                about: { ...initialData.about, ...parsed.about }, // Merge about so new fields aren't lost
-                settings: { ...initialData.settings, ...parsed.settings } 
+                ...localDBData, 
+                about: { ...initialData.about, ...localDBData.about },
+                settings: { ...initialData.settings, ...localDBData.settings } 
             };
             setGlobalData(merged);
+            console.log("Loaded data from built-in database (IndexedDB)");
+        } else {
+            // Migration: Check localStorage if IndexedDB is empty
+            const localData = localStorage.getItem('portfolio_data');
+            if (localData) {
+                const parsed = JSON.parse(localData);
+                const merged = { 
+                    ...initialData, 
+                    ...parsed, 
+                    about: { ...initialData.about, ...parsed.about },
+                    settings: { ...initialData.settings, ...parsed.settings } 
+                };
+                setGlobalData(merged);
+                // Migrate to IndexedDB
+                await saveAppDataLocally(merged);
+            }
         }
     } catch(e) {
-        console.warn("Local storage error:", e);
+        console.warn("Local database error:", e);
     }
 
     // 2. Fetch Data from Backend (Overrides local storage if newer)
@@ -243,29 +260,51 @@ const initializeData = async () => {
                     supabaseData = dbData.content;
                     supabaseUpdatedAt = dbData.updated_at;
                     
-                    // We found data in the cloud, let's use it!
-                    // Ensure schema compatibility
-                    const merged = { 
-                        ...initialData, 
-                        ...dbData.content, 
-                        about: { ...initialData.about, ...dbData.content.about },
-                        settings: { ...initialData.settings, ...dbData.content.settings } 
-                    };
+                    // SMART SYNC LOGIC:
+                    // Compare local vs remote timestamps to decide winner
+                    const remoteTime = new Date(supabaseUpdatedAt || 0).getTime();
+                    const localTime = localDBData?.lastUpdated || 0;
                     
-                    setGlobalData(merged);
-                    try {
-                        localStorage.setItem('portfolio_data', JSON.stringify(merged));
-                    } catch (e) {
-                         console.warn("Initial data too large for localStorage.");
+                    // If local is significantly newer (e.g. > 5 seconds), push to cloud
+                    if (localTime > remoteTime + 5000) {
+                        console.log("Local data is newer than cloud. Auto-syncing to Supabase...");
+                        await supabase.from('portfolio_data').upsert({ id: 1, content: localDBData });
+                        // Keep local data as is
+                        globalConnectionStatus = 'supabase';
+                        fetchedFromSupabase = true;
+                    } else {
+                        // Remote is newer or same, use remote
+                        console.log("Cloud data is newer or same. Using cloud version.");
+                        const merged = { 
+                            ...initialData, 
+                            ...dbData.content, 
+                            about: { ...initialData.about, ...dbData.content.about },
+                            settings: { ...initialData.settings, ...dbData.content.settings } 
+                        };
+                        
+                        setGlobalData(merged);
+                        // Sync to local built-in database
+                        await saveAppDataLocally(merged);
+                        
+                        globalConnectionStatus = 'supabase';
+                        fetchedFromSupabase = true;
                     }
-                    globalConnectionStatus = 'supabase';
-                    fetchedFromSupabase = true;
                 } else if (error) {
                     console.warn("Supabase fetch error (likely first run or offline):", error.message);
-                    // If it's a "Row not found" error, it means the DB is empty.
+                    // If it's a "Row not found" error (PGRST116), it means the DB is empty but connected.
                     if (error.code === 'PGRST116') {
+                        // If we have local data, push it up immediately!
+                        if (localDBData) {
+                             console.log("Supabase empty. Pushing local data...");
+                             await supabase.from('portfolio_data').upsert({ id: 1, content: localDBData });
+                        }
                         globalConnectionStatus = 'supabase'; 
                         fetchedFromSupabase = true;
+                    } 
+                    // If table doesn't exist (42P01), warn user to run setup script
+                    else if (error.code === '42P01') {
+                        console.error("CRITICAL: Supabase table 'portfolio_data' does not exist. Please run 'supabase_setup.sql' in your Supabase SQL Editor.");
+                        // alert("Database Setup Required: The 'portfolio_data' table is missing in Supabase. Please run the provided SQL script.");
                     }
                 }
             } catch (supabaseError) {
@@ -294,13 +333,11 @@ const initializeData = async () => {
                             const merged = { 
                                 ...initialData, 
                                 ...serverData, 
-                                about: { ...initialData.about, ...serverData.about },
-                                settings: { ...initialData.settings, ...serverData.settings } 
+                                ...{ about: { ...initialData.about, ...serverData.about } },
+                                ...{ settings: { ...initialData.settings, ...serverData.settings } } 
                             };
                             setGlobalData(merged);
-                            try {
-                                localStorage.setItem('portfolio_data', JSON.stringify(merged));
-                            } catch (e) {}
+                            await saveAppDataLocally(merged);
                         }
                     } else if (!fetchedFromSupabase) {
                         // Fallback if Supabase failed
@@ -311,11 +348,7 @@ const initializeData = async () => {
                             settings: { ...initialData.settings, ...serverData.settings } 
                         };
                         setGlobalData(merged);
-                        try {
-                            localStorage.setItem('portfolio_data', JSON.stringify(merged));
-                        } catch (e) {
-                             console.warn("Initial data too large for localStorage.");
-                        }
+                        await saveAppDataLocally(merged);
                         globalConnectionStatus = 'custom-server';
                     }
                 } else if (!fetchedFromSupabase) {
@@ -356,40 +389,43 @@ export const useStore = () => {
          return () => { clearTimeout(t); listeners = listeners.filter(l => l !== listener); }
     }
 
+    // Add online listener for auto-sync
+    const handleOnline = () => {
+        console.log("Back online! Re-initializing to sync...");
+        initializeData();
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       listeners = listeners.filter(l => l !== listener);
+      window.removeEventListener('online', handleOnline);
     };
   }, []);
 
   // Generic Save Function (Full Overwrite)
   const saveData = async (newData: AppData) => {
     try {
-      // 1. Update State
-      setGlobalData(newData);
+      // Add timestamp for sync logic
+      const dataWithTimestamp = { ...newData, lastUpdated: Date.now() };
       
-      // Attempt to save to LocalStorage, handle quota errors
+      // 1. Update State
+      setGlobalData(dataWithTimestamp);
+      
+      // 2. Save to Built-in Database (IndexedDB)
+      // This is our primary offline storage now, replacing localStorage
       try {
-        localStorage.setItem('portfolio_data', JSON.stringify(newData));
-      } catch (storageError: any) {
-        // Code 22 is often QuotaExceededError
-        if (storageError.name === 'QuotaExceededError' || storageError.code === 22) {
-          console.warn("Local storage quota exceeded. Data will persist in memory and backend, but might not persist locally after refresh if backend is unavailable.");
-          // We can optionally alert the user if we are in 'local' mode (offline)
-          if (globalConnectionStatus === 'local' || globalConnectionStatus === 'offline') {
-              alert("Storage limit reached! Your data (especially large images/files) cannot be saved locally anymore. Please connect to a backend or delete some large items.");
-          }
-        } else {
-          console.error("Local storage error:", storageError);
-        }
+        await saveAppDataLocally(dataWithTimestamp);
+      } catch (dbError) {
+        console.error("Local database save error:", dbError);
       }
 
-      // 2. Persist to Backend
+      // 3. Persist to Backend
       let savedToSupabase = false;
       if (supabase) {
         try {
           const { error } = await supabase
               .from('portfolio_data')
-              .upsert({ id: 1, content: newData });
+              .upsert({ id: 1, content: dataWithTimestamp });
           if (error) {
               console.error("Supabase Save Error:", error.message);
           } else {
@@ -408,7 +444,7 @@ export const useStore = () => {
                       'Content-Type': 'application/json',
                       'Authorization': `Bearer ${globalToken}`
                   },
-                  body: JSON.stringify(newData)
+                  body: JSON.stringify(dataWithTimestamp)
               });
           } catch (err) {
               console.error("Custom server save error:", err);
@@ -427,12 +463,12 @@ export const useStore = () => {
       let url = '';
       let fileToUpload = file;
       
-      // Image Compression (Skip for PDFs/Resumes)
+      // Image Compression
       if (file.type.startsWith('image/')) {
           try {
               const options = {
-                  maxSizeMB: 5, // Increased from 0.5MB to 5MB
-                  maxWidthOrHeight: 3840, // Increased from 1920px to 4K
+                  maxSizeMB: 0.5,
+                  maxWidthOrHeight: 1920,
                   useWebWorker: true
               };
               fileToUpload = await imageCompression(file, options);
@@ -452,13 +488,25 @@ export const useStore = () => {
 
               const { error: uploadError } = await supabase.storage
                 .from('portfolio-assets')
-                .upload(filePath, fileToUpload, { upsert: true });
+                .upload(filePath, fileToUpload);
 
               if (!uploadError) {
                   const { data } = supabase.storage
                     .from('portfolio-assets')
                     .getPublicUrl(filePath);
                   url = data.publicUrl;
+                  
+                  // Verify if the URL is actually accessible (Bucket might not be public)
+                  try {
+                      const checkRes = await fetch(url, { method: 'HEAD' });
+                      if (!checkRes.ok) {
+                          console.warn("Uploaded file is not publicly accessible. Bucket might not be public.");
+                          alert("⚠️ Upload Successful, but Image is not accessible.\n\nPlease ensure your 'portfolio-assets' bucket is set to PUBLIC in Supabase Storage settings.\n\nOr run the 'supabase_setup.sql' script.");
+                      }
+                  } catch (e) {
+                      console.warn("Could not verify image accessibility:", e);
+                  }
+
                   uploadedToSupabase = true;
                   return url; // Return immediately on success
               } else {
@@ -470,6 +518,8 @@ export const useStore = () => {
               throw e; // Re-throw to prevent silent fallback to broken custom server
           }
       } 
+      
+      let uploadedToServer = false;
       
       if (!uploadedToSupabase && USE_CUSTOM_SERVER) {
           try {
@@ -484,29 +534,40 @@ export const useStore = () => {
               });
               if (res.ok) {
                   const data = await res.json();
+                  uploadedToServer = true;
                   return data.url;
               }
           } catch (e) {
-              console.error("Custom server upload error:", e);
+              // Only log if we expected a server to be there (i.e. not just a network error in local mode)
+              // console.warn("Custom server upload failed, falling back to local storage.");
           }
       }
       
-      if (!uploadedToSupabase && !USE_CUSTOM_SERVER) {
-          // Offline/Local: Convert to Base64 (Not permanent!)
-          
-          // SAFETY CHECK: Prevent crashing browser with large files in local mode
-          if (fileToUpload.size > 5 * 1024 * 1024) { // 5MB Limit
-              const msg = "⚠️ File too large for Local Mode!\n\nProcessing a large file (like a 100MB resume) inside the browser will freeze your page and cause it to be blocked by Edge/Chrome.\n\nPlease connect to a Backend (Custom Server or Supabase) to upload large files.";
-              alert(msg);
-              throw new Error("File too large for local storage");
+      // If neither Supabase nor Custom Server worked, use Local Storage
+      if (!uploadedToSupabase && !uploadedToServer) {
+          // Offline/Local: Use IndexedDB (idb-keyval) for persistent local storage
+          // This bypasses the 5MB localStorage limit and persists across refreshes
+          try {
+              const base64 = await saveFileLocally(fileToUpload);
+              return base64;
+          } catch (idbError) {
+              console.error("IndexedDB save failed:", idbError);
+              
+              // Fallback to old localStorage method if IDB fails (rare)
+              // SAFETY CHECK: Prevent crashing browser with large files in local mode
+              if (fileToUpload.size > 5 * 1024 * 1024) { // 5MB Limit
+                  const msg = "⚠️ File too large for Local Mode!\n\nProcessing a large file (like a 100MB resume) inside the browser will freeze your page.\n\nPlease connect to a Backend (Custom Server or Supabase) to upload large files.";
+                  alert(msg);
+                  throw new Error("File too large for local storage");
+              }
+    
+              return new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(fileToUpload);
+              });
           }
-
-          return new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(fileToUpload);
-          });
       }
       
       return url;

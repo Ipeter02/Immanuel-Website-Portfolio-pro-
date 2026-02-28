@@ -55,6 +55,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onOpen: (project:
           style={{ x: xTranslate, y: yTranslate }}
           whileHover={{ scale: 1.25 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 z-10">
             <span className="flex items-center gap-2 text-white font-semibold tracking-wide px-4 py-2 rounded-full border border-white/30 bg-white/10 backdrop-blur-md hover:bg-white hover:text-slate-900 transition-all duration-300">

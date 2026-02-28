@@ -75,20 +75,20 @@ function App() {
     }
   }, []);
 
-  // Manage Preloader Timing
+  // Manage Preloader Timing - Optimized for speed
   useEffect(() => {
-    // If loaded, wait just a moment for smooth transition
     if (isLoaded) {
+      // Minimal delay just to prevent flickering, but much faster than before
       const timer = setTimeout(() => {
         setShowPreloader(false);
-      }, 1500); 
+      }, 500); // Reduced from 1500ms to 500ms
       return () => clearTimeout(timer);
     }
 
-    // Safety: Force show site after 3s max
+    // Safety fallback
     const safetyTimer = setTimeout(() => {
         setShowPreloader(false);
-    }, 3000);
+    }, 2000); // Reduced from 3000ms to 2000ms
 
     return () => clearTimeout(safetyTimer);
   }, [isLoaded]);
