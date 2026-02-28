@@ -32,10 +32,10 @@ const Contact: React.FC = () => {
         setStatus('success');
         setFormData({ name: '', email: '', message: '', honeypot: '' });
         setTimeout(() => setStatus('idle'), 3000);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to send message:", error);
         setStatus('idle');
-        alert("Failed to send message. Please try again.");
+        alert(`Failed to send message: ${error.message || "Unknown error"}`);
     }
   };
 

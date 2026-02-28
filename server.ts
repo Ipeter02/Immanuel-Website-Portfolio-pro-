@@ -220,6 +220,41 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// Test Email Route
+app.get('/api/test-email', async (req, res) => {
+    try {
+        if (!process.env.SMTP_HOST) {
+            throw new Error("SMTP_HOST not configured");
+        }
+
+        // 1. Verify Connection
+        await transporter.verify();
+        console.log("SMTP Connection Verified");
+
+        // 2. Send Test Email
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: process.env.ADMIN_EMAIL || process.env.SMTP_USER,
+            subject: "Test Email from Portfolio",
+            text: "If you receive this, your email configuration is working correctly!",
+            html: "<p>If you receive this, your email configuration is working correctly!</p>"
+        });
+
+        res.json({ 
+            message: "Email sent successfully!", 
+            messageId: info.messageId, 
+            response: info.response 
+        });
+    } catch (error: any) {
+        console.error("Test Email Failed:", error);
+        res.status(500).json({ 
+            message: "Email Test Failed", 
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
 // 4. POST Reply Message
 app.post('/api/reply', authenticateToken, async (req, res) => {
   const { to, subject, message, originalMessageId } = req.body;
