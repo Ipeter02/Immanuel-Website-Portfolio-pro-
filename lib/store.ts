@@ -618,8 +618,15 @@ export const useStore = () => {
              });
              
              if (!res.ok) {
-                 const errData = await res.json();
-                 throw new Error(errData.error || errData.message || "Server failed to send email");
+                 const text = await res.text();
+                 try {
+                     const errData = JSON.parse(text);
+                     throw new Error(errData.error || errData.message || "Server failed to send email");
+                 } catch (jsonError) {
+                     // If response is not JSON (e.g. Vercel 500/504 HTML page), throw the text
+                     // Limit length to avoid massive HTML dumps in alerts
+                     throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
+                 }
              }
          } catch (customServerError) {
              console.error("Custom server add message error:", customServerError);
