@@ -37,7 +37,7 @@ const Skills: React.FC = () => {
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mt-3 mb-6">My Skills</h2>
           <div className="h-1.5 w-24 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
           <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mt-6 text-lg">
-            A diverse arsenal of languages and tools I use to build scalable, high-performance applications.
+            My diverse arsenal of skills enables me to build innovative solutions, leverage technology effectively, and drive impactful transformation.
           </p>
         </motion.div>
 
