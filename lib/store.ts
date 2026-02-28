@@ -577,40 +577,44 @@ export const useStore = () => {
   const addMessage = async (msg: Omit<Message, 'id' | 'date' | 'read'>) => {
     const newMessage = { ...msg, id: Math.random().toString(36).substr(2, 9), date: new Date().toISOString(), read: false };
     
-    // 1. Optimistic UI Update
+    // 1. Optimistic UI Update (Local)
     const newMessages = [newMessage, ...globalData.messages];
     const newData = { ...globalData, messages: newMessages };
-    
-    // Use the safe saveData wrapper (or manually handle it to avoid circular dependency, but saveData handles localStorage error)
-    await saveData(newData); 
+    setGlobalData(newData);
+    await saveAppDataLocally(newData);
 
-    let sentToSupabase = false;
+    // 2. Persist to Supabase (CRITICAL for Admin Dashboard visibility)
+    let savedToCloud = false;
     if (supabase) {
          try {
              // Fetch current state first to avoid overwriting other updates
              const { data: current, error } = await supabase.from('portfolio_data').select('content').eq('id', 1).single();
-             if (!error) {
-                 if (current && current.content) {
-                     const remoteMessages = current.content.messages || [];
-                     const updatedContent = { ...current.content, messages: [newMessage, ...remoteMessages] };
-                     await supabase.from('portfolio_data').upsert({ id: 1, content: updatedContent });
-                 } else {
-                     // First message ever
-                     await supabase.from('portfolio_data').upsert({ id: 1, content: newData });
-                 }
-                 sentToSupabase = true;
+             
+             if (!error && current?.content) {
+                 const remoteMessages = current.content.messages || [];
+                 // Prepend new message
+                 const updatedContent = { ...current.content, messages: [newMessage, ...remoteMessages] };
+                 
+                 const { error: saveError } = await supabase.from('portfolio_data').upsert({ id: 1, content: updatedContent });
+                 if (saveError) throw saveError;
+                 savedToCloud = true;
+             } else if (error && error.code === 'PGRST116') {
+                 // First ever save
+                 await supabase.from('portfolio_data').upsert({ id: 1, content: newData });
+                 savedToCloud = true;
              }
-         } catch (supabaseError) {
-             console.error("Supabase Add Message Exception:", supabaseError);
+         } catch (supabaseError: any) {
+             console.error("Supabase Add Message Failed:", supabaseError);
+             // We don't throw here yet, because we still want to try sending the email
          }
     }
+
+    // 3. Send Email Notification (via Custom Server)
+    let emailSent = false;
+    let emailError = null;
     
-    // ALWAYS call the custom server if enabled. 
-    // This is crucial because the server handles EMAIL NOTIFICATIONS.
-    // Even if we saved to Supabase, we need the server to send the email.
     if (USE_CUSTOM_SERVER) {
          try {
-             // Use dedicated endpoint to append message safely (Backend handles atomic update)
              const res = await fetch(`${CUSTOM_API_URL}/contact`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
@@ -619,21 +623,30 @@ export const useStore = () => {
              
              if (!res.ok) {
                  const text = await res.text();
-                 try {
-                     const errData = JSON.parse(text);
-                     throw new Error(errData.error || errData.message || "Server failed to send email");
-                 } catch (jsonError) {
-                     // If response is not JSON (e.g. Vercel 500/504 HTML page), throw the text
-                     // Limit length to avoid massive HTML dumps in alerts
-                     throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
-                 }
+                 throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}`);
              }
-         } catch (customServerError) {
-             console.error("Custom server add message error:", customServerError);
-             // Re-throw so the UI knows it failed
-             throw customServerError;
+             emailSent = true;
+         } catch (customServerError: any) {
+             console.error("Email sending failed:", customServerError);
+             emailError = customServerError;
          }
     }
+
+    // 4. Final Result Handling
+    if (!savedToCloud && !emailSent) {
+        // Worst case: Neither saved to cloud nor emailed.
+        // Throw error to trigger the "Open Email App" fallback in the UI.
+        throw new Error(emailError?.message || "Failed to save message or send email.");
+    }
+
+    // If saved to cloud but email failed, we technically "succeeded" in capturing the lead,
+    // but we should warn the user or trigger fallback if they want to be sure.
+    // For now, if email failed, we throw so the user gets the fallback option, 
+    // ensuring they can send the email manually.
+    if (!emailSent && emailError) {
+        throw emailError;
+    }
+
     return true;
   };
 
