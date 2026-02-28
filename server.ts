@@ -87,16 +87,18 @@ const writeDbFile = (data: any) => {
 // --- Email Transporter ---
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
+  port: parseInt(process.env.SMTP_PORT || '465'),
   secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  // Add timeouts to prevent hanging requests on Vercel
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
+  // Improved timeouts for Vercel
+  connectionTimeout: 5000, // 5 seconds
+  greetingTimeout: 5000,
   socketTimeout: 10000,
+  logger: true, // Log to console for debugging
+  debug: true   // Include debug info
 });
 
 // --- API Routes ---
@@ -115,13 +117,7 @@ app.post('/api/login', (req, res) => {
 // 1. GET Data
 app.get('/api/portfolio', async (req, res) => {
   try {
-    // On Vercel, we can't rely on local db.json. 
-    // We should ideally fetch from Supabase here if configured, 
-    // but for now, return empty or default if file doesn't exist.
     if (process.env.VERCEL) {
-       // In serverless, do NOT return a fresh timestamp with empty data.
-       // This causes the frontend to overwrite valid Supabase/Local data with empty data.
-       // Return 404 so the frontend knows to use Supabase or Local storage.
        return res.status(404).json({ message: 'No server-side storage on Vercel (Use Supabase)' });
     }
 
@@ -157,7 +153,6 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
 
   // Honeypot check
   if (newMessage.honeypot) {
-    // Silently reject bots that fill out the hidden field
     return res.json({ message: 'Message received', success: true });
   }
 
@@ -188,15 +183,21 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
       };
 
       try {
-          // Use await to ensure email is sent before responding
+          // Verify connection before sending
+          await transporter.verify();
+          console.log("SMTP Connection Verified");
+
+          // Send email
           await transporter.sendMail(mailOptions);
           console.log('Email sent successfully');
       } catch (emailError: any) {
           console.error("Failed to send email:", emailError);
+          // Return detailed error for debugging
           return res.status(500).json({ 
               message: 'Failed to send email notification', 
               success: false, 
-              error: emailError.message || String(emailError) 
+              error: emailError.message || String(emailError),
+              code: emailError.code
           });
       }
     } else {

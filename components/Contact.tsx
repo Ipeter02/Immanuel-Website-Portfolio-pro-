@@ -35,7 +35,14 @@ const Contact: React.FC = () => {
     } catch (error: any) {
         console.error("Failed to send message:", error);
         setStatus('idle');
-        alert(`Failed to send message: ${error.message || "Unknown error"}`);
+        
+        // Automatic Fallback: Open Email Client
+        const fallback = window.confirm(`Automatic sending failed (${error.message}).\n\nWould you like to send this via your email app instead?`);
+        if (fallback) {
+            const subject = `Contact from ${formData.name}`;
+            const body = `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`;
+            window.location.href = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
     }
   };
 
